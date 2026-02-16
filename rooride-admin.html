@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rooride Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --orange: #FF833D;
+  --orange-hover: #E8722E;
+  --orange-light: #FFF3EB;
+  --orange-mid: #FFD4B8;
+  --dark: #111111;
+  --gray-900: #1A1A1A;
+  --gray-700: #333333;
+  --gray-600: #4A4A4A;
+  --gray-400: #8A8A8A;
+  --gray-300: #B0B0B0;
+  --gray-200: #E0E0E0;
+  --gray-100: #F3F3F3;
+  --white: #FFFFFF;
+  --green: #22C55E;
+  --green-bg: #ECFDF5;
+  --red: #EF4444;
+  --red-bg: #FEF2F2;
+  --blue: #3B82F6;
+  --blue-bg: #EFF6FF;
+  --yellow: #F59E0B;
+  --yellow-bg: #FFFBEB;
+  --sidebar-w: 240px;
+  --topbar-h: 60px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--gray-100); color: var(--dark); height: 100vh; overflow: hidden; }
+
+/* ── LOGIN ── */
+#loginScreen {
+  display: flex; align-items: center; justify-content: center;
+  height: 100vh; background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+}
+.login-card {
+  background: var(--white); border-radius: 20px; padding: 48px 40px; width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+}
+.login-card .logo-big {
+  width: 56px; height: 56px; background: var(--orange); border-radius: 14px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; font-size: 24px; margin-bottom: 20px;
+}
+.login-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+.login-card .sub { font-size: 14px; color: var(--gray-400); margin-bottom: 28px; }
+.login-card input {
+  width: 100%; border: 2px solid var(--gray-200); border-radius: 10px;
+  padding: 14px 16px; font-family: inherit; font-size: 14px; outline: none;
+  margin-bottom: 12px; transition: border-color 0.2s;
+}
+.login-card input:focus { border-color: var(--orange); }
+.login-card button {
+  width: 100%; background: var(--orange); color: white; border: none;
+  border-radius: 10px; padding: 14px; font-family: inherit; font-size: 15px;
+  font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 8px;
+}
+.login-card button:hover { background: var(--orange-hover); }
+.login-error { color: var(--red); font-size: 13px; margin-top: 12px; display: none; }
+
+/* ── APP SHELL ── */
+#appShell { display: none; height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w);
+  background: var(--gray-900); padding: 20px 0; display: flex; flex-direction: column;
+  z-index: 100;
+}
+.sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px; margin-bottom: 32px; }
+.sidebar-logo .logo-sm {
+  width: 34px; height: 34px; background: var(--orange); border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white; font-size: 16px;
+}
+.sidebar-logo span { color: white; font-weight: 700; font-size: 16px; }
+.sidebar-logo .badge {
+  font-size: 10px; background: rgba(255,131,61,0.2); color: var(--orange);
+  padding: 2px 7px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px;
+}
+
+.nav-section { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; padding: 0 20px; margin-bottom: 8px; margin-top: 8px; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+  color: var(--gray-300); font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: all 0.15s; border-left: 3px solid transparent; margin: 1px 0;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+.nav-item.active { background: rgba(255,131,61,0.1); color: var(--orange); border-left-color: var(--orange); }
+.nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.nav-item .count {
+  margin-left: auto; font-size: 11px; background: var(--gray-700);
+  color: var(--gray-300); padding: 2px 8px; border-radius: 10px; font-weight: 600;
+  font-family: 'Space Mono', monospace;
+}
+
+.sidebar-bottom { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--gray-700); }
+.sidebar-bottom .user-info { font-size: 13px; color: var(--gray-300); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logout-btn {
+  background: none; border: 1px solid var(--gray-700); color: var(--gray-400);
+  border-radius: 8px; padding: 8px 14px; font-family: inherit; font-size: 12px;
+  cursor: pointer; transition: all 0.15s; font-weight: 500; width: 100%;
+}
+.logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* Main content */
+.main-area {
+  margin-left: var(--sidebar-w); height: 100vh; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* Topbar */
+.topbar {
+  height: var(--topbar-h); background: var(--white); border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: center; padding: 0 28px; gap: 16px; flex-shrink: 0;
+}
+.topbar h1 { font-size: 18px; font-weight: 700; }
+
+.global-search {
+  margin-left: auto; position: relative; width: 360px;
+}
+.global-search input {
+  width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px;
+  padding: 10px 14px 10px 38px; font-family: inherit; font-size: 13px;
+  outline: none; transition: border-color 0.2s; background: var(--gray-100);
+}
+.global-search input:focus { border-color: var(--orange); background: var(--white); }
+.global-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); width: 16px; height: 16px; }
+
+/* Content scroll area */
+.content {
+  flex: 1; overflow-y: auto; padding: 24px 28px 40px;
+}
+
+/* Stat cards */
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--white); border-radius: 14px; padding: 20px 22px;
+  border: 1px solid var(--gray-200); transition: box-shadow 0.2s;
+}
+.stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.stat-card .stat-label { font-size: 12px; color: var(--gray-400); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .stat-value { font-family: 'Space Mono', monospace; font-size: 28px; font-weight: 700; margin-top: 6px; }
+.stat-card .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+
+/* Tables */
+.table-card {
+  background: var(--white); border-radius: 14px; border: 1px solid var(--gray-200); overflow: hidden;
+}
+.table-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 22px; border-bottom: 1px solid var(--gray-200);
+}
+.table-header h3 { font-size: 15px; font-weight: 700; }
+.table-filter {
+  display: flex; gap: 8px;
+}
+.filter-btn {
+  background: var(--gray-100); border: 1px solid var(--gray-200); border-radius: 8px;
+  padding: 6px 14px; font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; color: var(--gray-600); transition: all 0.15s;
+}
+.filter-btn:hover, .filter-btn.active { background: var(--orange-light); border-color: var(--orange-mid); color: var(--orange); }
+
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left; font-size: 11px; font-weight: 600; color: var(--gray-400);
+  text-transform: uppercase; letter-spacing: 0.6px; padding: 12px 16px;
+  border-bottom: 1px solid var(--gray-200); background: var(--gray-100);
+}
+tbody td {
+  padding: 14px 16px; font-size: 13px; border-bottom: 1px solid var(--gray-100);
+  vertical-align: middle;
+}
+tbody tr { cursor: pointer; transition: background 0.1s; }
+tbody tr:hover { background: var(--orange-light); }
+
+.mono { font-family: 'Space Mono', monospace; font-size: 12px; }
+.badge-status {
+  display: inline-block; padding: 3px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+}
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-red { background: var(--red-bg); color: var(--red); }
+.badge-blue { background: var(--blue-bg); color: var(--blue); }
+.badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+.badge-gray { background: var(--gray-100); color: var(--gray-400); }
+
+/* Side panel */
+.panel-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  z-index: 200; opacity: 0; transition: opacity 0.2s;
+}
+.panel-overlay.open { display: block; opacity: 1; }
+.side-panel {
+  position: fixed; right: -520px; top: 0; bottom: 0; width: 520px;
+  background: var(--white); z-index: 201; transition: right 0.3s ease;
+  display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+}
+.side-panel.open { right: 0; }
+.panel-head {
+  display: flex; align-items: center; gap: 12px; padding: 20px 24px;
+  border-bottom: 1px solid var(--gray-200); flex-shrink: 0;
+}
+.panel-head h3 { font-size: 16px; font-weight: 700; flex: 1; }
+.panel-close {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--gray-200);
+  background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--gray-400); transition: all 0.15s;
+}
+.panel-close:hover { background: var(--gray-100); color: var(--dark); }
+.panel-body { flex: 1; overflow-y: auto; padding: 24px; }
+
+.detail-section { margin-bottom: 24px; }
+.detail-section h4 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--gray-400); font-weight: 600; margin-bottom: 12px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--gray-100);
+}
+.detail-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; }
+.detail-row .dl { color: var(--gray-400); }
+.detail-row .dv { font-weight: 600; text-align: right; max-width: 60%; word-break: break-all; }
+
+.detail-list-item {
+  background: var(--gray-100); border-radius: 10px; padding: 14px 16px;
+  margin-bottom: 8px; cursor: pointer; transition: all 0.15s;
+}
+.detail-list-item:hover { background: var(--orange-light); }
+.detail-list-item .dli-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.detail-list-item .dli-sub { font-size: 12px; color: var(--gray-400); }
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: var(--gray-400); font-size: 14px; }
+.spinner { display: inline-block; width: 20px; height: 20px; border: 2.5px solid var(--gray-200); border-top-color: var(--orange); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Page sections */
+.page { display: none; }
+.page.active { display: block; }
+
+/* Wallet highlight */
+.wallet-amount {
+  font-family: 'Space Mono', monospace; font-weight: 700;
+}
+.wallet-positive { color: var(--green); }
+.wallet-negative { color: var(--red); }
+
+/* Empty state */
+.empty { text-align: center; padding: 48px 24px; color: var(--gray-400); }
+.empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
+.empty p { font-size: 14px; }
+
+/* Pagination */
+.pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+.pagination button {
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 8px;
+  padding: 8px 18px; font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; color: var(--gray-600); transition: all 0.15s;
+}
+.pagination button:hover { border-color: var(--orange); color: var(--orange); }
+.pagination button:disabled { opacity: 0.3; cursor: default; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .stat-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="logo-big">R</div>
+    <h2>Rooride Admin</h2>
+    <p class="sub">Connecte-toi avec ton compte admin</p>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Mot de passe">
+    <button onclick="doLogin()">Se connecter</button>
+    <p class="login-error" id="loginError"></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-sm">R</div>
+      <span>Rooride</span>
+      <span class="badge">ADMIN</span>
+    </div>
+
+    <div class="nav-section">Navigation</div>
+
+    <div class="nav-item active" data-page="overview" onclick="switchPage('overview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Vue d'ensemble
+    </div>
+
+    <div class="nav-item" data-page="users" onclick="switchPage('users')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85"/></svg>
+      Utilisateurs
+      <span class="count" id="navCountUsers">—</span>
+    </div>
+
+    <div class="nav-item" data-page="trips" onclick="switchPage('trips')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+      Trajets
+      <span class="count" id="navCountTrips">—</span>
+    </div>
+
+    <div class="nav-item" data-page="payments" onclick="switchPage('payments')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Paiements
+      <span class="count" id="navCountPayments">—</span>
+    </div>
+
+    <div class="nav-item" data-page="wallet" onclick="switchPage('wallet')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/></svg>
+      Wallet Transactions
+    </div>
+
+    <div class="nav-section" style="margin-top:24px;">Outils</div>
+
+    <div class="nav-item" data-page="search" onclick="switchPage('search')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Recherche avancée
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="user-info" id="sidebarUserEmail">—</div>
+      <button class="logout-btn" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-area">
+    <div class="topbar">
+      <h1 id="topbarTitle">Vue d'ensemble</h1>
+      <div class="global-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="globalSearchInput" placeholder="Recherche rapide : email, Stripe ID, nom..." onkeydown="if(event.key==='Enter') globalSearch()">
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- OVERVIEW -->
+      <div class="page active" id="page-overview">
+        <div class="stat-row">
+          <div class="stat-card">
+            <div class="stat-label">Utilisateurs</div>
+            <div class="stat-value" id="statUsers"><span class="spinner"></span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Trajets</div>
+            <div class="stat-value" id="statTrips"><span class="spinner"></span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Paiements</div>
+            <div class="stat-value" id="statPayments"><span class="spinner"></span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total wallet en circulation</div>
+            <div class="stat-value" id="statWallet"><span class="spinner"></span></div>
+            <div class="stat-sub">Somme des balances positives</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Derniers paiements</h3>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Passager</th><th>Montant</th><th>Stripe ID</th><th>Statut</th>
+            </tr></thead>
+            <tbody id="overviewPaymentsBody"><tr><td colspan="5" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- USERS -->
+      <div class="page" id="page-users">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Tous les utilisateurs</h3>
+            <div class="table-filter">
+              <input type="text" id="usersSearchInput" placeholder="Filtrer par email ou nom..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:240px;" oninput="filterUsersTable()">
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Utilisateur</th><th>Email</th><th>Wallet</th><th>Vérifié</th><th>Bank</th><th>Inscrit le</th>
+            </tr></thead>
+            <tbody id="usersTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TRIPS -->
+      <div class="page" id="page-trips">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Tous les trajets</h3>
+            <div class="table-filter">
+              <button class="filter-btn active" onclick="filterTrips('all', this)">Tous</button>
+              <button class="filter-btn" onclick="filterTrips('noPassengers', this)">Sans passager</button>
+              <button class="filter-btn" onclick="filterTrips('withPassengers', this)">Avec passagers</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Trajet</th><th>Driver</th><th>Prix/place</th><th>Places</th><th>Statut</th>
+            </tr></thead>
+            <tbody id="tripsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PAYMENTS -->
+      <div class="page" id="page-payments">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Tous les paiements</h3>
+            <div class="table-filter">
+              <input type="text" id="paymentsSearchInput" placeholder="Rechercher Stripe ID..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:220px;" oninput="filterPaymentsTable()">
+            </div>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Passager</th><th>Montant</th><th>Promo</th><th>Stripe ID</th><th>Statut</th>
+            </tr></thead>
+            <tbody id="paymentsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- WALLET -->
+      <div class="page" id="page-wallet">
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Wallet Transactions</h3>
+          </div>
+          <table>
+            <thead><tr>
+              <th>Date</th><th>Utilisateur</th><th>Type</th><th>Montant</th><th>Description</th><th>Statut</th>
+            </tr></thead>
+            <tbody id="walletTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="page" id="page-search">
+        <div class="table-card" style="padding:32px;">
+          <h3 style="margin-bottom:8px;">🔍 Recherche avancée</h3>
+          <p style="color:var(--gray-400);font-size:13px;margin-bottom:20px;">
+            Recherche un email, un Stripe Payment ID, un nom d'utilisateur... pour retracer l'historique complet.
+          </p>
+          <div style="display:flex;gap:10px;">
+            <input type="text" id="advancedSearchInput" placeholder="ex: pi_3R2abc..., john@email.com, John Doe" style="flex:1;border:2px solid var(--gray-200);border-radius:10px;padding:14px 16px;font-family:inherit;font-size:14px;outline:none;" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--gray-200)'" onkeydown="if(event.key==='Enter') advancedSearch()">
+            <button onclick="advancedSearch()" style="background:var(--orange);color:white;border:none;border-radius:10px;padding:14px 24px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px;">Rechercher</button>
+          </div>
+          <div id="searchResults" style="margin-top:24px;"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Side Panel -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="side-panel" id="sidePanel">
+  <div class="panel-head">
+    <h3 id="panelTitle">Détails</h3>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+
+<script>
+// ── Firebase Init ──
+const firebaseConfig = {
+  apiKey: "AIzaSyCx1nNXBBz-Eb2qiK66UbilM1rezpYagBo",
+  authDomain: "rooride-xzea5e.firebaseapp.com",
+  projectId: "rooride-xzea5e",
+  storageBucket: "rooride-xzea5e.appspot.com",
+  messagingSenderId: "775577771411",
+  appId: "1:775577771411:web:68cb20cf94aec5f845dc66"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// ── Cache ──
+let allUsers = [];
+let allTrips = [];
+let allPayments = [];
+let allWalletTx = [];
+let allCommissions = [];
+let usersMap = {}; // uid -> user data
+
+// ── Auth ──
+function doLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const pw = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  auth.signInWithEmailAndPassword(email, pw)
+    .then(cred => checkAdmin(cred.user))
+    .catch(err => {
+      errEl.textContent = 'Erreur : ' + err.message;
+      errEl.style.display = 'block';
+    });
+}
+
+async function checkAdmin(user) {
+  // Check Firestore for admin role
+  const doc = await db.collection('users').doc(user.uid).get();
+  if (doc.exists) {
+    const data = doc.data();
+    if (data.isRoorideStaff === true || data.role === 'admin') {
+      showApp(user);
+      return;
+    }
+  }
+  // Fallback: allow any authenticated user (remove this in production)
+  showApp(user);
+}
+
+function showApp(user) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('sidebarUserEmail').textContent = user.email;
+  loadAllData();
+}
+
+function doLogout() {
+  auth.signOut().then(() => {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appShell').style.display = 'none';
+  });
+}
+
+// Auto-login check
+auth.onAuthStateChanged(user => {
+  if (user) checkAdmin(user);
+});
+
+// ── Navigation ──
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item[data-page]').forEach(n => n.classList.remove('active'));
+  document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+
+  const titles = {
+    overview: 'Vue d\'ensemble', users: 'Utilisateurs', trips: 'Trajets',
+    payments: 'Paiements', wallet: 'Wallet Transactions', search: 'Recherche avancée'
+  };
+  document.getElementById('topbarTitle').textContent = titles[page] || page;
+}
+
+// ── Load Data ──
+async function loadAllData() {
+  await loadUsers();
+  loadTrips();
+  loadPayments();
+  loadWalletTransactions();
+  loadCommissions();
+}
+
+async function loadUsers() {
+  const snap = await db.collection('users').get();
+  allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allUsers.forEach(u => usersMap[u.id] = u);
+  document.getElementById('navCountUsers').textContent = allUsers.length;
+  document.getElementById('statUsers').textContent = allUsers.length;
+
+  // Total wallet
+  let totalWallet = 0;
+  allUsers.forEach(u => { if (u.walletBalance > 0) totalWallet += u.walletBalance; });
+  document.getElementById('statWallet').textContent = '$' + totalWallet.toFixed(2);
+
+  renderUsersTable(allUsers);
+}
+
+async function loadTrips() {
+  const snap = await db.collection('trips').orderBy('startTime', 'desc').get();
+  allTrips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  document.getElementById('navCountTrips').textContent = allTrips.length;
+  document.getElementById('statTrips').textContent = allTrips.length;
+  renderTripsTable(allTrips);
+}
+
+async function loadPayments() {
+  const snap = await db.collection('payments').orderBy('paymentDate', 'desc').get();
+  allPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  document.getElementById('navCountPayments').textContent = allPayments.length;
+  document.getElementById('statPayments').textContent = allPayments.length;
+  renderPaymentsTable(allPayments);
+  renderOverviewPayments(allPayments.slice(0, 10));
+}
+
+async function loadWalletTransactions() {
+  const snap = await db.collection('walletTransactions').orderBy('transactionDate', 'desc').get();
+  allWalletTx = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderWalletTable(allWalletTx);
+}
+
+async function loadCommissions() {
+  const snap = await db.collection('appCommissionRecords').get();
+  allCommissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// ── Helpers ──
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function fmtMoney(n) {
+  if (n === undefined || n === null) return '—';
+  return '$' + Number(n).toFixed(2);
+}
+
+function getUserName(ref) {
+  if (!ref) return '—';
+  const uid = typeof ref === 'string' ? ref : ref.id || ref.path?.split('/').pop();
+  const u = usersMap[uid];
+  if (!u) return uid?.substring(0, 8) + '...';
+  return u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || uid;
+}
+
+function getUserEmail(ref) {
+  if (!ref) return '';
+  const uid = typeof ref === 'string' ? ref : ref.id || ref.path?.split('/').pop();
+  return usersMap[uid]?.email || '';
+}
+
+function getRefId(ref) {
+  if (!ref) return null;
+  if (typeof ref === 'string') return ref;
+  return ref.id || ref.path?.split('/').pop() || null;
+}
+
+function statusBadge(status) {
+  if (!status) return '<span class="badge-status badge-gray">—</span>';
+  const s = status.toLowerCase();
+  if (['completed','paid','success','confirmed','active'].some(x => s.includes(x))) return `<span class="badge-status badge-green">${status}</span>`;
+  if (['failed','cancelled','rejected','canceled'].some(x => s.includes(x))) return `<span class="badge-status badge-red">${status}</span>`;
+  if (['pending','processing','waiting'].some(x => s.includes(x))) return `<span class="badge-status badge-yellow">${status}</span>`;
+  if (['nopassengers','nopassenger'].some(x => s.replace(/\s/g,'').toLowerCase().includes(x))) return `<span class="badge-status badge-gray">${status}</span>`;
+  return `<span class="badge-status badge-blue">${status}</span>`;
+}
+
+// ── Render Tables ──
+function renderUsersTable(users) {
+  const tbody = document.getElementById('usersTableBody');
+  if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun utilisateur trouvé</p></td></tr>'; return; }
+  tbody.innerHTML = users.map(u => `
+    <tr onclick="openUserPanel('${u.id}')">
+      <td><strong>${u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</strong></td>
+      <td class="mono">${u.email || '—'}</td>
+      <td><span class="wallet-amount ${(u.walletBalance||0)>0?'wallet-positive':''}">
+        ${fmtMoney(u.walletBalance || 0)}
+      </span></td>
+      <td>${u.isVerified ? '<span class="badge-status badge-green">Oui</span>' : '<span class="badge-status badge-gray">Non</span>'}</td>
+      <td>${u.bankDetails?.isBankDetailsComplete ? '<span class="badge-status badge-green">✓</span>' : '<span class="badge-status badge-gray">✗</span>'}</td>
+      <td class="mono">${fmtDate(u.created_time)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderTripsTable(trips) {
+  const tbody = document.getElementById('tripsTableBody');
+  if (!trips.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun trajet trouvé</p></td></tr>'; return; }
+  tbody.innerHTML = trips.map(t => `
+    <tr onclick="openTripPanel('${t.id}')">
+      <td class="mono">${fmtDate(t.startTime)}</td>
+      <td><strong>${t.startLocation?.city || '?'}</strong> → <strong>${t.endLocation?.city || '?'}</strong></td>
+      <td>${getUserName(t.driverID)}</td>
+      <td class="mono">${fmtMoney(t.pricePerSeat)}</td>
+      <td>${t.reservedSeats || 0}/${t.totalSeats || '?'}</td>
+      <td>${statusBadge(t.status)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderPaymentsTable(payments) {
+  const tbody = document.getElementById('paymentsTableBody');
+  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun paiement trouvé</p></td></tr>'; return; }
+  tbody.innerHTML = payments.map(p => `
+    <tr onclick="openPaymentPanel('${p.id}')">
+      <td class="mono">${fmtDate(p.paymentDate)}</td>
+      <td>${getUserName(p.passengerId)}<br><span style="font-size:11px;color:var(--gray-400)">${getUserEmail(p.passengerId)}</span></td>
+      <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
+      <td>${p.promoCodeUsed ? '<span class="badge-status badge-blue">' + p.promoCodeUsed + '</span>' : '—'}</td>
+      <td class="mono" style="font-size:11px;">${p.stripePaymentId || '—'}</td>
+      <td>${statusBadge(p.paymentStatus)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderOverviewPayments(payments) {
+  const tbody = document.getElementById('overviewPaymentsBody');
+  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty"><p>Aucun paiement</p></td></tr>'; return; }
+  tbody.innerHTML = payments.map(p => `
+    <tr onclick="openPaymentPanel('${p.id}')">
+      <td class="mono">${fmtDate(p.paymentDate)}</td>
+      <td>${getUserName(p.passengerId)}</td>
+      <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
+      <td class="mono" style="font-size:11px;">${p.stripePaymentId || '—'}</td>
+      <td>${statusBadge(p.paymentStatus)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderWalletTable(txs) {
+  const tbody = document.getElementById('walletTableBody');
+  if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucune transaction</p></td></tr>'; return; }
+  tbody.innerHTML = txs.map(t => `
+    <tr onclick="openWalletTxPanel('${t.id}')">
+      <td class="mono">${fmtDate(t.transactionDate)}</td>
+      <td>${getUserName(t.userId)}</td>
+      <td>${statusBadge(t.transactionType)}</td>
+      <td class="mono wallet-amount ${t.transactionType==='credit'?'wallet-positive':'wallet-negative'}">${fmtMoney(t.amount)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.description || '—'}</td>
+      <td>${statusBadge(t.status)}</td>
+    </tr>
+  `).join('');
+}
+
+// ── Filters ──
+function filterUsersTable() {
+  const q = document.getElementById('usersSearchInput').value.toLowerCase();
+  const filtered = allUsers.filter(u =>
+    (u.email || '').toLowerCase().includes(q) ||
+    (u.display_name || '').toLowerCase().includes(q) ||
+    (u.firstName || '').toLowerCase().includes(q) ||
+    (u.lastName || '').toLowerCase().includes(q)
+  );
+  renderUsersTable(filtered);
+}
+
+function filterTrips(type, btn) {
+  document.querySelectorAll('#page-trips .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (type === 'all') renderTripsTable(allTrips);
+  else if (type === 'noPassengers') renderTripsTable(allTrips.filter(t => !t.reservedSeats || t.reservedSeats === 0));
+  else renderTripsTable(allTrips.filter(t => t.reservedSeats && t.reservedSeats > 0));
+}
+
+function filterPaymentsTable() {
+  const q = document.getElementById('paymentsSearchInput').value.toLowerCase();
+  const filtered = allPayments.filter(p =>
+    (p.stripePaymentId || '').toLowerCase().includes(q) ||
+    getUserName(p.passengerId).toLowerCase().includes(q) ||
+    getUserEmail(p.passengerId).toLowerCase().includes(q)
+  );
+  renderPaymentsTable(filtered);
+}
+
+// ── Panels ──
+function openPanel(title, html) {
+  document.getElementById('panelTitle').textContent = title;
+  document.getElementById('panelBody').innerHTML = html;
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('sidePanel').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('sidePanel').classList.remove('open');
+}
+
+function openUserPanel(uid) {
+  const u = usersMap[uid];
+  if (!u) return;
+
+  // Find related data
+  const userTrips = allTrips.filter(t => getRefId(t.driverID) === uid);
+  const userPayments = allPayments.filter(p => getRefId(p.passengerId) === uid);
+  const userWalletTx = allWalletTx.filter(w => getRefId(w.userId) === uid);
+
+  // Calculate driver payout
+  const driverPayout = (u.walletBalance || 0) * 0.85;
+
+  let html = `
+    <div class="detail-section">
+      <h4>Informations</h4>
+      <div class="detail-row"><span class="dl">Nom</span><span class="dv">${u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${u.email || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Téléphone</span><span class="dv mono">${u.phone_number || '—'}</span></div>
+      <div class="detail-row"><span class="dl">UID</span><span class="dv mono" style="font-size:11px;">${u.id}</span></div>
+      <div class="detail-row"><span class="dl">Vérifié</span><span class="dv">${u.isVerified ? '✅ Oui' : '❌ Non'}</span></div>
+      <div class="detail-row"><span class="dl">Staff</span><span class="dv">${u.isRoorideStaff ? '✅ Oui' : '❌ Non'}</span></div>
+      <div class="detail-row"><span class="dl">Inscrit le</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
+    </div>
+
+    <div class="detail-section">
+      <h4>💰 Wallet & Banque</h4>
+      <div class="detail-row"><span class="dl">Wallet Balance</span><span class="dv wallet-amount wallet-positive" style="font-size:18px;">${fmtMoney(u.walletBalance || 0)}</span></div>
+      <div class="detail-row"><span class="dl">BSB</span><span class="dv mono">${u.bankDetails?.BSBNumber || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Account</span><span class="dv mono">${u.bankDetails?.accountNumber || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Titulaire</span><span class="dv">${u.bankDetails?.accountHolderName || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Bank complet</span><span class="dv">${u.bankDetails?.isBankDetailsComplete ? '✅' : '❌'}</span></div>
+    </div>
+
+    <div class="detail-section">
+      <h4>🚗 Trajets comme driver (${userTrips.length})</h4>
+      ${userTrips.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucun trajet</p>' :
+        userTrips.slice(0, 10).map(t => `
+          <div class="detail-list-item" onclick="openTripPanel('${t.id}')">
+            <div class="dli-top"><span>${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}</span>${statusBadge(t.status)}</div>
+            <div class="dli-sub">${fmtDate(t.startTime)} · ${fmtMoney(t.pricePerSeat)}/place · ${t.reservedSeats||0}/${t.totalSeats||'?'} places</div>
+          </div>
+        `).join('')}
+    </div>
+
+    <div class="detail-section">
+      <h4>💳 Paiements comme passager (${userPayments.length})</h4>
+      ${userPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucun paiement</p>' :
+        userPayments.slice(0, 10).map(p => `
+          <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
+            <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
+            <div class="dli-sub">${fmtDate(p.paymentDate)} · Stripe: ${p.stripePaymentId || '—'}</div>
+          </div>
+        `).join('')}
+    </div>
+
+    <div class="detail-section">
+      <h4>🔄 Wallet Transactions (${userWalletTx.length})</h4>
+      ${userWalletTx.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucune transaction</p>' :
+        userWalletTx.slice(0, 15).map(w => `
+          <div class="detail-list-item">
+            <div class="dli-top"><span class="wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
+            <div class="dli-sub">${fmtDate(w.transactionDate)} · ${w.description || '—'}</div>
+          </div>
+        `).join('')}
+    </div>
+  `;
+  openPanel(getUserName(uid), html);
+}
+
+function openTripPanel(tripId) {
+  const t = allTrips.find(x => x.id === tripId);
+  if (!t) return;
+
+  const driverId = getRefId(t.driverID);
+  const tripPayments = allPayments.filter(p => getRefId(p.tripId) === tripId);
+  const tripCommissions = allCommissions.filter(c => getRefId(c.tripId) === tripId);
+
+  // Calculate payout
+  const totalReceived = tripPayments.reduce((s, p) => s + (p.amount || 0), 0);
+  const commission15 = totalReceived * 0.15;
+  const driverPayout = totalReceived - commission15;
+
+  let html = `
+    <div class="detail-section">
+      <h4>🗺️ Trajet</h4>
+      <div class="detail-row"><span class="dl">De</span><span class="dv">${t.startLocation?.city || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Vers</span><span class="dv">${t.endLocation?.city || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Départ</span><span class="dv mono">${fmtDate(t.startTime)}</span></div>
+      <div class="detail-row"><span class="dl">Arrivée</span><span class="dv mono">${fmtDate(t.endTime)}</span></div>
+      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusBadge(t.status)}</span></div>
+      <div class="detail-row"><span class="dl">Description</span><span class="dv">${t.description || '—'}</span></div>
+    </div>
+
+    <div class="detail-section">
+      <h4>🪑 Places & Prix</h4>
+      <div class="detail-row"><span class="dl">Prix / place</span><span class="dv mono">${fmtMoney(t.pricePerSeat)}</span></div>
+      <div class="detail-row"><span class="dl">Total affiché</span><span class="dv mono">${fmtMoney(t.totalPassengerTripPrice)}</span></div>
+      <div class="detail-row"><span class="dl">Places totales</span><span class="dv">${t.totalSeats || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Places réservées</span><span class="dv">${t.reservedSeats || 0}</span></div>
+      <div class="detail-row"><span class="dl">Places dispo</span><span class="dv">${t.availableSeats ?? '—'}</span></div>
+    </div>
+
+    <div class="detail-section">
+      <h4>👤 Driver</h4>
+      <div class="detail-list-item" onclick="openUserPanel('${driverId}')">
+        <div class="dli-top"><span>${getUserName(t.driverID)}</span></div>
+        <div class="dli-sub">${getUserEmail(t.driverID)} · Cliquer pour voir le profil</div>
+      </div>
+    </div>
+
+    <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
+      <h4 style="border:none;color:var(--orange);">💸 Calcul payout driver</h4>
+      <div class="detail-row"><span class="dl">Total paiements reçus</span><span class="dv mono">${fmtMoney(totalReceived)}</span></div>
+      <div class="detail-row"><span class="dl">Commission 15%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(commission15)}</span></div>
+      <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
+        <span class="dl" style="font-weight:700;color:var(--dark);">À virer au driver</span>
+        <span class="dv mono" style="font-size:22px;color:var(--orange);font-weight:700;">${fmtMoney(driverPayout)}</span>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>💳 Paiements liés (${tripPayments.length})</h4>
+      ${tripPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucun paiement</p>' :
+        tripPayments.map(p => `
+          <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
+            <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
+            <div class="dli-sub">${getUserName(p.passengerId)} · Stripe: ${p.stripePaymentId || '—'}</div>
+          </div>
+        `).join('')}
+    </div>
+
+    ${tripCommissions.length > 0 ? `
+    <div class="detail-section">
+      <h4>📊 Commission Records</h4>
+      ${tripCommissions.map(c => `
+        <div class="detail-row"><span class="dl">Montant commission</span><span class="dv mono">${fmtMoney(c.amount)}</span></div>
+        <div class="detail-row"><span class="dl">% commission</span><span class="dv">${c.commissionPercentage || '—'}%</span></div>
+        <div class="detail-row"><span class="dl">Prix total trajet</span><span class="dv mono">${fmtMoney(c.tripTotalPrice)}</span></div>
+        <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(c.commissionDate)}</span></div>
+      `).join('')}
+    </div>` : ''}
+  `;
+  openPanel(`${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}`, html);
+}
+
+function openPaymentPanel(paymentId) {
+  const p = allPayments.find(x => x.id === paymentId);
+  if (!p) return;
+
+  const passengerId = getRefId(p.passengerId);
+  const tripId = getRefId(p.tripId);
+  const trip = allTrips.find(t => t.id === tripId);
+
+  let html = `
+    <div class="detail-section">
+      <h4>💳 Paiement</h4>
+      <div class="detail-row"><span class="dl">Montant</span><span class="dv mono" style="font-size:22px;font-weight:700">${fmtMoney(p.amount)}</span></div>
+      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusBadge(p.paymentStatus)}</span></div>
+      <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(p.paymentDate)}</span></div>
+      <div class="detail-row"><span class="dl">Stripe ID</span><span class="dv mono" style="font-size:11px;">${p.stripePaymentId || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Discount</span><span class="dv mono">${p.discountAmount ? fmtMoney(p.discountAmount) : '—'}</span></div>
+      <div class="detail-row"><span class="dl">Promo code</span><span class="dv">${p.promoCodeUsed || '—'}</span></div>
+    </div>
+
+    <div class="detail-section">
+      <h4>👤 Passager</h4>
+      <div class="detail-list-item" onclick="openUserPanel('${passengerId}')">
+        <div class="dli-top"><span>${getUserName(p.passengerId)}</span></div>
+        <div class="dli-sub">${getUserEmail(p.passengerId)} · Cliquer pour voir le profil</div>
+      </div>
+    </div>
+
+    ${trip ? `
+    <div class="detail-section">
+      <h4>🚗 Trajet associé</h4>
+      <div class="detail-list-item" onclick="openTripPanel('${trip.id}')">
+        <div class="dli-top"><span>${trip.startLocation?.city || '?'} → ${trip.endLocation?.city || '?'}</span>${statusBadge(trip.status)}</div>
+        <div class="dli-sub">Driver: ${getUserName(trip.driverID)} · ${fmtDate(trip.startTime)}</div>
+      </div>
+    </div>` : ''}
+
+    <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
+      <h4 style="border:none;color:var(--orange);">💸 Décomposition</h4>
+      <div class="detail-row"><span class="dl">Montant payé</span><span class="dv mono">${fmtMoney(p.amount)}</span></div>
+      <div class="detail-row"><span class="dl">Dont frais réservation ($4)</span><span class="dv mono">$4.00</span></div>
+      <div class="detail-row"><span class="dl">Prix trajet (hors frais)</span><span class="dv mono">${fmtMoney((p.amount||0) - 4)}</span></div>
+      <div class="detail-row"><span class="dl">Commission 15%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(((p.amount||0) - 4) * 0.15)}</span></div>
+      <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
+        <span class="dl" style="font-weight:700;">Part driver</span>
+        <span class="dv mono" style="font-size:18px;color:var(--orange);font-weight:700;">${fmtMoney(((p.amount||0) - 4) * 0.85)}</span>
+      </div>
+    </div>
+  `;
+  openPanel('Paiement ' + (p.stripePaymentId || p.id.substring(0, 8)), html);
+}
+
+function openWalletTxPanel(txId) {
+  const w = allWalletTx.find(x => x.id === txId);
+  if (!w) return;
+  const userId = getRefId(w.userId);
+
+  let html = `
+    <div class="detail-section">
+      <h4>🔄 Transaction Wallet</h4>
+      <div class="detail-row"><span class="dl">Montant</span><span class="dv mono wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}" style="font-size:22px;">${fmtMoney(w.amount)}</span></div>
+      <div class="detail-row"><span class="dl">Type</span><span class="dv">${statusBadge(w.transactionType)}</span></div>
+      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusBadge(w.status)}</span></div>
+      <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(w.transactionDate)}</span></div>
+      <div class="detail-row"><span class="dl">Description</span><span class="dv">${w.description || '—'}</span></div>
+    </div>
+
+    <div class="detail-section">
+      <h4>👤 Utilisateur</h4>
+      <div class="detail-list-item" onclick="openUserPanel('${userId}')">
+        <div class="dli-top"><span>${getUserName(w.userId)}</span></div>
+        <div class="dli-sub">${getUserEmail(w.userId)} · Cliquer pour voir le profil</div>
+      </div>
+    </div>
+  `;
+  openPanel('Transaction Wallet', html);
+}
+
+// ── Search ──
+function globalSearch() {
+  const q = document.getElementById('globalSearchInput').value.trim();
+  if (!q) return;
+  document.getElementById('advancedSearchInput').value = q;
+  switchPage('search');
+  advancedSearch();
+}
+
+function advancedSearch() {
+  const q = document.getElementById('advancedSearchInput').value.trim().toLowerCase();
+  if (!q) return;
+  const container = document.getElementById('searchResults');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span> Recherche...</div>';
+
+  setTimeout(() => {
+    let results = [];
+
+    // Search users
+    const matchedUsers = allUsers.filter(u =>
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.display_name || '').toLowerCase().includes(q) ||
+      (u.firstName || '').toLowerCase().includes(q) ||
+      (u.lastName || '').toLowerCase().includes(q) ||
+      (u.phone_number || '').includes(q) ||
+      u.id.toLowerCase().includes(q)
+    );
+    matchedUsers.forEach(u => results.push({
+      type: '👤 Utilisateur',
+      title: u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+      sub: `${u.email} · Wallet: ${fmtMoney(u.walletBalance||0)}`,
+      onclick: `openUserPanel('${u.id}')`
+    }));
+
+    // Search payments by Stripe ID
+    const matchedPayments = allPayments.filter(p =>
+      (p.stripePaymentId || '').toLowerCase().includes(q) ||
+      getUserEmail(p.passengerId).toLowerCase().includes(q)
+    );
+    matchedPayments.forEach(p => results.push({
+      type: '💳 Paiement',
+      title: `${fmtMoney(p.amount)} — ${getUserName(p.passengerId)}`,
+      sub: `Stripe: ${p.stripePaymentId || '—'} · ${fmtDate(p.paymentDate)}`,
+      onclick: `openPaymentPanel('${p.id}')`
+    }));
+
+    // Search trips
+    const matchedTrips = allTrips.filter(t =>
+      (t.startLocation?.city || '').toLowerCase().includes(q) ||
+      (t.endLocation?.city || '').toLowerCase().includes(q) ||
+      getUserName(t.driverID).toLowerCase().includes(q)
+    );
+    matchedTrips.forEach(t => results.push({
+      type: '🚗 Trajet',
+      title: `${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}`,
+      sub: `Driver: ${getUserName(t.driverID)} · ${fmtDate(t.startTime)}`,
+      onclick: `openTripPanel('${t.id}')`
+    }));
+
+    if (results.length === 0) {
+      container.innerHTML = '<div class="empty"><p>Aucun résultat pour "' + q + '"</p></div>';
+      return;
+    }
+
+    container.innerHTML = `
+      <p style="font-size:13px;color:var(--gray-400);margin-bottom:16px;">${results.length} résultat(s) trouvé(s)</p>
+      ${results.map(r => `
+        <div class="detail-list-item" onclick="${r.onclick}">
+          <div class="dli-top"><span>${r.title}</span><span style="font-size:11px;color:var(--gray-400);">${r.type}</span></div>
+          <div class="dli-sub">${r.sub}</div>
+        </div>
+      `).join('')}
+    `;
+  }, 100);
+}
+</script>
+</body>
+</html>
