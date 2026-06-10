@@ -1,0 +1,13 @@
+# Local agent / tooling config — may contain secrets, never publish
+.claude/
+
+# FlutterFlow app source — not part of the deployed admin dashboard
+rooride/
+
+# Local data-export / utility scripts
+scripts/
+
+# Logs and local working notes
+*.log
+firebase-debug.log
+ROORIDE_TECH_DATA_OVERVIEW.md

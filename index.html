@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -351,10 +351,10 @@ tbody tr:hover { background: var(--orange-light); }
   <div class="login-card">
     <div class="logo-big">R</div>
     <h2>Rooride Admin</h2>
-    <p class="sub">Connecte-toi avec ton compte admin</p>
+    <p class="sub">Sign in with your admin account</p>
     <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPassword" placeholder="Mot de passe">
-    <button onclick="doLogin()">Se connecter</button>
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="doLogin()">Sign in</button>
     <p class="login-error" id="loginError"></p>
   </div>
 </div>
@@ -373,30 +373,30 @@ tbody tr:hover { background: var(--orange-light); }
 
     <div class="nav-item active" data-page="overview" onclick="switchPage('overview')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-      Vue d'ensemble
+      Overview
     </div>
 
     <div class="nav-item" data-page="users" onclick="switchPage('users')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85"/></svg>
-      Utilisateurs
+      Users
       <span class="count" id="navCountUsers">—</span>
     </div>
 
     <div class="nav-item" data-page="verification" onclick="switchPage('verification')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
-      Vérification ID
+      ID Verification
       <span class="verif-pending-badge" id="navCountVerif" style="display:none">—</span>
     </div>
 
     <div class="nav-item" data-page="trips" onclick="switchPage('trips')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-      Trajets
+      Trips
       <span class="count" id="navCountTrips">—</span>
     </div>
 
     <div class="nav-item" data-page="payments" onclick="switchPage('payments')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-      Paiements
+      Payments
       <span class="count" id="navCountPayments">—</span>
     </div>
 
@@ -407,29 +407,30 @@ tbody tr:hover { background: var(--orange-light); }
 
     <div class="nav-item" data-page="stats" onclick="switchPage('stats')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
-      Statistiques
+      Statistics
     </div>
 
-    <div class="nav-section" style="margin-top:24px;">Outils</div>
+    <div class="nav-section" style="margin-top:24px;">Tools</div>
 
     <div class="nav-item" data-page="search" onclick="switchPage('search')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Recherche avancée
+      Advanced search
     </div>
 
     <div class="sidebar-bottom">
       <div class="user-info" id="sidebarUserEmail">—</div>
-      <button class="logout-btn" onclick="doLogout()">Déconnexion</button>
+      <button class="logout-btn" onclick="doLogout()">Log out</button>
     </div>
   </aside>
 
   <!-- Main -->
   <div class="main-area">
     <div class="topbar">
-      <h1 id="topbarTitle">Vue d'ensemble</h1>
+      <h1 id="topbarTitle">Overview</h1>
+      <span id="privacyPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Privacy mode</span>
       <div class="global-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="globalSearchInput" placeholder="Recherche rapide : email, Stripe ID, nom..." onkeydown="if(event.key==='Enter') globalSearch()">
+        <input type="text" id="globalSearchInput" placeholder="Quick search: email, Stripe ID, name..." onkeydown="if(event.key==='Enter') globalSearch()">
       </div>
     </div>
 
@@ -439,33 +440,33 @@ tbody tr:hover { background: var(--orange-light); }
       <div class="page active" id="page-overview">
         <div class="stat-row">
           <div class="stat-card">
-            <div class="stat-label">Utilisateurs</div>
+            <div class="stat-label">Users</div>
             <div class="stat-value" id="statUsers"><span class="spinner"></span></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Trajets</div>
+            <div class="stat-label">Trips</div>
             <div class="stat-value" id="statTrips"><span class="spinner"></span></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Paiements</div>
+            <div class="stat-label">Payments</div>
             <div class="stat-value" id="statPayments"><span class="spinner"></span></div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Total wallet en circulation</div>
+            <div class="stat-label">Total wallet in circulation</div>
             <div class="stat-value" id="statWallet"><span class="spinner"></span></div>
-            <div class="stat-sub">Somme des balances positives</div>
+            <div class="stat-sub">Sum of positive balances</div>
           </div>
         </div>
 
         <div class="table-card">
           <div class="table-header">
-            <h3>Derniers paiements</h3>
+            <h3>Latest payments</h3>
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Passager</th><th>Montant</th><th>Stripe ID</th><th>Statut</th>
+              <th>Date</th><th>Passenger</th><th>Amount</th><th>Stripe ID</th><th>Status</th>
             </tr></thead>
-            <tbody id="overviewPaymentsBody"><tr><td colspan="5" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+            <tbody id="overviewPaymentsBody"><tr><td colspan="5" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -474,16 +475,16 @@ tbody tr:hover { background: var(--orange-light); }
       <div class="page" id="page-users">
         <div class="table-card">
           <div class="table-header">
-            <h3>Tous les utilisateurs</h3>
+            <h3>All users</h3>
             <div class="table-filter">
-              <input type="text" id="usersSearchInput" placeholder="Filtrer par email ou nom..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:240px;" oninput="filterUsersTable()">
+              <input type="text" id="usersSearchInput" placeholder="Filter by email or name..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:240px;" oninput="filterUsersTable()">
             </div>
           </div>
           <table>
             <thead><tr>
-              <th>Utilisateur</th><th>Email</th><th>Wallet</th><th>Vérifié</th><th>Bank</th><th>Inscrit le</th>
+              <th>User</th><th>Email</th><th>Wallet</th><th>Verified</th><th>Bank</th><th>Joined</th>
             </tr></thead>
-            <tbody id="usersTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+            <tbody id="usersTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -492,18 +493,18 @@ tbody tr:hover { background: var(--orange-light); }
       <div class="page" id="page-trips">
         <div class="table-card">
           <div class="table-header">
-            <h3>Tous les trajets</h3>
+            <h3>All trips</h3>
             <div class="table-filter">
-              <button class="filter-btn active" onclick="filterTrips('all', this)">Tous</button>
-              <button class="filter-btn" onclick="filterTrips('noPassengers', this)">Sans passager</button>
-              <button class="filter-btn" onclick="filterTrips('withPassengers', this)">Avec passagers</button>
+              <button class="filter-btn active" onclick="filterTrips('all', this)">All</button>
+              <button class="filter-btn" onclick="filterTrips('noPassengers', this)">No passengers</button>
+              <button class="filter-btn" onclick="filterTrips('withPassengers', this)">With passengers</button>
             </div>
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Trajet</th><th>Driver</th><th>Prix/place</th><th>Places</th><th>Statut</th>
+              <th>Date</th><th>Route</th><th>Driver</th><th>Price/seat</th><th>Seats</th><th>Status</th>
             </tr></thead>
-            <tbody id="tripsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+            <tbody id="tripsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -512,16 +513,16 @@ tbody tr:hover { background: var(--orange-light); }
       <div class="page" id="page-payments">
         <div class="table-card">
           <div class="table-header">
-            <h3>Tous les paiements</h3>
+            <h3>All payments</h3>
             <div class="table-filter">
-              <input type="text" id="paymentsSearchInput" placeholder="Rechercher Stripe ID..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:220px;" oninput="filterPaymentsTable()">
+              <input type="text" id="paymentsSearchInput" placeholder="Search Stripe ID..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:220px;" oninput="filterPaymentsTable()">
             </div>
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Passager</th><th>Montant</th><th>Promo</th><th>Stripe ID</th><th>Statut</th>
+              <th>Date</th><th>Passenger</th><th>Amount</th><th>Promo</th><th>Stripe ID</th><th>Status</th>
             </tr></thead>
-            <tbody id="paymentsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+            <tbody id="paymentsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -534,9 +535,9 @@ tbody tr:hover { background: var(--orange-light); }
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Utilisateur</th><th>Type</th><th>Montant</th><th>Description</th><th>Statut</th>
+              <th>Date</th><th>User</th><th>Type</th><th>Amount</th><th>Description</th><th>Status</th>
             </tr></thead>
-            <tbody id="walletTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+            <tbody id="walletTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -545,59 +546,59 @@ tbody tr:hover { background: var(--orange-light); }
       <div class="page" id="page-verification">
         <div class="stat-row" style="margin-bottom:24px;">
           <div class="stat-card" style="border-left:4px solid var(--yellow);">
-            <div class="stat-label">En attente de review</div>
+            <div class="stat-label">Pending review</div>
             <div class="stat-value" id="verifStatPending"><span class="spinner"></span></div>
-            <div class="stat-sub">Pièce soumise, non vérifiée</div>
+            <div class="stat-sub">Document submitted, not verified</div>
           </div>
           <div class="stat-card" style="border-left:4px solid var(--green);">
-            <div class="stat-label">Vérifiés</div>
+            <div class="stat-label">Verified</div>
             <div class="stat-value" id="verifStatVerified"><span class="spinner"></span></div>
             <div class="stat-sub">isVerified = true</div>
           </div>
           <div class="stat-card" style="border-left:4px solid var(--gray-300);">
-            <div class="stat-label">Sans pièce soumise</div>
+            <div class="stat-label">No document submitted</div>
             <div class="stat-value" id="verifStatNone"><span class="spinner"></span></div>
-            <div class="stat-sub">Pas encore de document</div>
+            <div class="stat-sub">No document yet</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Taux de vérification</div>
+            <div class="stat-label">Verification rate</div>
             <div class="stat-value" id="verifStatRate"><span class="spinner"></span></div>
           </div>
         </div>
 
         <div class="table-card">
           <div class="table-header">
-            <h3>Dossiers à vérifier</h3>
+            <h3>Cases to review</h3>
             <div class="table-filter">
-              <button class="filter-btn active" onclick="filterVerif('pending', this)">En attente</button>
-              <button class="filter-btn" onclick="filterVerif('verified', this)">Vérifiés</button>
-              <button class="filter-btn" onclick="filterVerif('all', this)">Tous</button>
+              <button class="filter-btn active" onclick="filterVerif('pending', this)">Pending</button>
+              <button class="filter-btn" onclick="filterVerif('verified', this)">Verified</button>
+              <button class="filter-btn" onclick="filterVerif('all', this)">All</button>
             </div>
           </div>
           <table>
             <thead><tr>
-              <th>Utilisateur</th><th>Email</th><th>Pièce d'identité</th><th>Inscrit le</th><th>Statut</th><th>Action</th>
+              <th>User</th><th>Email</th><th>ID document</th><th>Joined</th><th>Status</th><th>Action</th>
             </tr></thead>
-            <tbody id="verifTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Chargement...</td></tr></tbody>
+            <tbody id="verifTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
 
       <!-- STATS -->
       <div class="page" id="page-stats">
-        <div id="statsContent"><div class="loading"><span class="spinner"></span> Chargement des statistiques...</div></div>
+        <div id="statsContent"><div class="loading"><span class="spinner"></span> Loading statistics...</div></div>
       </div>
 
       <!-- SEARCH -->
       <div class="page" id="page-search">
         <div class="table-card" style="padding:32px;">
-          <h3 style="margin-bottom:8px;">🔍 Recherche avancée</h3>
+          <h3 style="margin-bottom:8px;">🔍 Advanced search</h3>
           <p style="color:var(--gray-400);font-size:13px;margin-bottom:20px;">
-            Recherche un email, un Stripe Payment ID, un nom d'utilisateur... pour retracer l'historique complet.
+            Search an email, a Stripe Payment ID, a username... to trace the full history.
           </p>
           <div style="display:flex;gap:10px;">
-            <input type="text" id="advancedSearchInput" placeholder="ex: pi_3R2abc..., john@email.com, John Doe" style="flex:1;border:2px solid var(--gray-200);border-radius:10px;padding:14px 16px;font-family:inherit;font-size:14px;outline:none;" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--gray-200)'" onkeydown="if(event.key==='Enter') advancedSearch()">
-            <button onclick="advancedSearch()" style="background:var(--orange);color:white;border:none;border-radius:10px;padding:14px 24px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px;">Rechercher</button>
+            <input type="text" id="advancedSearchInput" placeholder="e.g. pi_3R2abc..., john@email.com, John Doe" style="flex:1;border:2px solid var(--gray-200);border-radius:10px;padding:14px 16px;font-family:inherit;font-size:14px;outline:none;" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--gray-200)'" onkeydown="if(event.key==='Enter') advancedSearch()">
+            <button onclick="advancedSearch()" style="background:var(--orange);color:white;border:none;border-radius:10px;padding:14px 24px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px;">Search</button>
           </div>
           <div id="searchResults" style="margin-top:24px;"></div>
         </div>
@@ -611,7 +612,7 @@ tbody tr:hover { background: var(--orange-light); }
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 <div class="side-panel" id="sidePanel">
   <div class="panel-head">
-    <h3 id="panelTitle">Détails</h3>
+    <h3 id="panelTitle">Details</h3>
     <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
   <div class="panel-body" id="panelBody"></div>
@@ -641,6 +642,31 @@ let allNationalities = [];
 let usersMap = {}; // uid -> user data
 let natMap = {};   // id -> nationality data
 
+// ── Privacy mode ──
+// Emails listed here get FULL access. Any other logged-in email is forced into
+// privacy mode (sensitive data hidden). NOTE: this is display-side only and is
+// bypassable by a technical user via DevTools / direct Firestore access — see the
+// spec's "Known limitations".
+const FULL_ACCESS_EMAILS = ['valpdu44@gmail.com'];
+let PRIVACY_MODE = false;
+
+function pseudoName(uid) {
+  return 'User ' + (uid ? String(uid).slice(-4).toUpperCase() : '????');
+}
+function maskEmail(email) {
+  if (!email) return '—';
+  return email.charAt(0) + '•••@•••';
+}
+function maskPhone(phone) {
+  if (!phone) return '—';
+  const digits = String(phone).replace(/\D/g, '');
+  if (!digits) return '—';
+  return '••• ••• ••' + digits.slice(-2);
+}
+function maskId(val) {
+  return val ? '•••' : '—';
+}
+
 // ── Auth ──
 function doLogin() {
   const email = document.getElementById('loginEmail').value;
@@ -651,7 +677,7 @@ function doLogin() {
   auth.signInWithEmailAndPassword(email, pw)
     .then(cred => checkAdmin(cred.user))
     .catch(err => {
-      errEl.textContent = 'Erreur : ' + err.message;
+      errEl.textContent = 'Error: ' + err.message;
       errEl.style.display = 'block';
     });
 }
@@ -671,9 +697,11 @@ async function checkAdmin(user) {
 }
 
 function showApp(user) {
+  PRIVACY_MODE = !FULL_ACCESS_EMAILS.includes((user.email || '').toLowerCase());
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('sidebarUserEmail').textContent = user.email;
+  document.getElementById('privacyPill').style.display = PRIVACY_MODE ? 'inline-flex' : 'none';
   loadAllData();
 }
 
@@ -697,9 +725,9 @@ function switchPage(page) {
   document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
 
   const titles = {
-    overview: 'Vue d\'ensemble', users: 'Utilisateurs', trips: 'Trajets',
-    payments: 'Paiements', wallet: 'Wallet Transactions', search: 'Recherche avancée',
-    stats: 'Statistiques', verification: 'Vérification ID'
+    overview: 'Overview', users: 'Users', trips: 'Trips',
+    payments: 'Payments', wallet: 'Wallet Transactions', search: 'Advanced search',
+    stats: 'Statistics', verification: 'ID Verification'
   };
   document.getElementById('topbarTitle').textContent = titles[page] || page;
   if (page === 'stats') renderStatsPage();
@@ -781,7 +809,7 @@ async function loadCommissions() {
 function fmtDate(ts) {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('en-AU', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function fmtMoney(n) {
@@ -792,6 +820,7 @@ function fmtMoney(n) {
 function getUserName(ref) {
   if (!ref) return '—';
   const uid = typeof ref === 'string' ? ref : ref.id || ref.path?.split('/').pop();
+  if (PRIVACY_MODE) return pseudoName(uid);
   const u = usersMap[uid];
   if (!u) return uid?.substring(0, 8) + '...';
   return u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || uid;
@@ -800,7 +829,9 @@ function getUserName(ref) {
 function getUserEmail(ref) {
   if (!ref) return '';
   const uid = typeof ref === 'string' ? ref : ref.id || ref.path?.split('/').pop();
-  return usersMap[uid]?.email || '';
+  const email = usersMap[uid]?.email || '';
+  if (PRIVACY_MODE) return email ? maskEmail(email) : '';
+  return email;
 }
 
 function getRefId(ref) {
@@ -822,15 +853,15 @@ function statusBadge(status) {
 // ── Render Tables ──
 function renderUsersTable(users) {
   const tbody = document.getElementById('usersTableBody');
-  if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun utilisateur trouvé</p></td></tr>'; return; }
+  if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No users found</p></td></tr>'; return; }
   tbody.innerHTML = users.map(u => `
     <tr onclick="openUserPanel('${u.id}')">
-      <td><strong>${u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</strong></td>
-      <td class="mono">${u.email || '—'}</td>
+      <td><strong>${PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—')}</strong></td>
+      <td class="mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
       <td><span class="wallet-amount ${(u.walletBalance||0)>0?'wallet-positive':''}">
         ${fmtMoney(u.walletBalance || 0)}
       </span></td>
-      <td>${u.isVerified ? '<span class="badge-status badge-green">Oui</span>' : '<span class="badge-status badge-gray">Non</span>'}</td>
+      <td>${u.isVerified ? '<span class="badge-status badge-green">Yes</span>' : '<span class="badge-status badge-gray">No</span>'}</td>
       <td>${u.bankDetails?.isBankDetailsComplete ? '<span class="badge-status badge-green">✓</span>' : '<span class="badge-status badge-gray">✗</span>'}</td>
       <td class="mono">${fmtDate(u.created_time)}</td>
     </tr>
@@ -839,7 +870,7 @@ function renderUsersTable(users) {
 
 function renderTripsTable(trips) {
   const tbody = document.getElementById('tripsTableBody');
-  if (!trips.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun trajet trouvé</p></td></tr>'; return; }
+  if (!trips.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No trips found</p></td></tr>'; return; }
   tbody.innerHTML = trips.map(t => `
     <tr onclick="openTripPanel('${t.id}')">
       <td class="mono">${fmtDate(t.startTime)}</td>
@@ -854,14 +885,14 @@ function renderTripsTable(trips) {
 
 function renderPaymentsTable(payments) {
   const tbody = document.getElementById('paymentsTableBody');
-  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun paiement trouvé</p></td></tr>'; return; }
+  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No payments found</p></td></tr>'; return; }
   tbody.innerHTML = payments.map(p => `
     <tr onclick="openPaymentPanel('${p.id}')">
       <td class="mono">${fmtDate(p.paymentDate)}</td>
       <td>${getUserName(p.passengerId)}<br><span style="font-size:11px;color:var(--gray-400)">${getUserEmail(p.passengerId)}</span></td>
       <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
       <td>${p.promoCodeUsed ? '<span class="badge-status badge-blue">' + p.promoCodeUsed + '</span>' : '—'}</td>
-      <td class="mono" style="font-size:11px;">${p.stripePaymentId || '—'}</td>
+      <td class="mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</td>
       <td>${statusBadge(p.paymentStatus)}</td>
     </tr>
   `).join('');
@@ -869,13 +900,13 @@ function renderPaymentsTable(payments) {
 
 function renderOverviewPayments(payments) {
   const tbody = document.getElementById('overviewPaymentsBody');
-  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty"><p>Aucun paiement</p></td></tr>'; return; }
+  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty"><p>No payments</p></td></tr>'; return; }
   tbody.innerHTML = payments.map(p => `
     <tr onclick="openPaymentPanel('${p.id}')">
       <td class="mono">${fmtDate(p.paymentDate)}</td>
       <td>${getUserName(p.passengerId)}</td>
       <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
-      <td class="mono" style="font-size:11px;">${p.stripePaymentId || '—'}</td>
+      <td class="mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</td>
       <td>${statusBadge(p.paymentStatus)}</td>
     </tr>
   `).join('');
@@ -883,7 +914,7 @@ function renderOverviewPayments(payments) {
 
 function renderWalletTable(txs) {
   const tbody = document.getElementById('walletTableBody');
-  if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucune transaction</p></td></tr>'; return; }
+  if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No transactions</p></td></tr>'; return; }
   tbody.innerHTML = txs.map(t => `
     <tr onclick="openWalletTxPanel('${t.id}')">
       <td class="mono">${fmtDate(t.transactionDate)}</td>
@@ -953,50 +984,51 @@ function openUserPanel(uid) {
 
   let html = `
     <div class="detail-section">
-      <h4>Informations</h4>
-      <div class="detail-row"><span class="dl">Nom</span><span class="dv">${u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${u.email || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Téléphone</span><span class="dv mono">${u.phone_number || '—'}</span></div>
+      <h4>Information</h4>
+      <div class="detail-row"><span class="dl">Name</span><span class="dv">${PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number) : (u.phone_number || '—')}</span></div>
       <div class="detail-row"><span class="dl">UID</span><span class="dv mono" style="font-size:11px;">${u.id}</span></div>
-      <div class="detail-row"><span class="dl">Vérifié</span><span class="dv">${u.isVerified ? '✅ Oui' : '❌ Non'}</span></div>
-      <div class="detail-row"><span class="dl">Staff</span><span class="dv">${u.isRoorideStaff ? '✅ Oui' : '❌ Non'}</span></div>
-      <div class="detail-row"><span class="dl">Inscrit le</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
+      <div class="detail-row"><span class="dl">Verified</span><span class="dv">${u.isVerified ? '✅ Yes' : '❌ No'}</span></div>
+      <div class="detail-row"><span class="dl">Staff</span><span class="dv">${u.isRoorideStaff ? '✅ Yes' : '❌ No'}</span></div>
+      <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
     </div>
 
     <div class="detail-section">
-      <h4>💰 Wallet & Banque</h4>
+      <h4>💰 Wallet & Bank</h4>
       <div class="detail-row"><span class="dl">Wallet Balance</span><span class="dv wallet-amount wallet-positive" style="font-size:18px;">${fmtMoney(u.walletBalance || 0)}</span></div>
+      ${PRIVACY_MODE ? `<div class="detail-row"><span class="dl">Bank details</span><span class="dv" style="color:var(--gray-400);">Hidden (privacy mode)</span></div>` : `
       <div class="detail-row"><span class="dl">BSB</span><span class="dv mono">${u.bankDetails?.BSBNumber || '—'}</span></div>
       <div class="detail-row"><span class="dl">Account</span><span class="dv mono">${u.bankDetails?.accountNumber || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Titulaire</span><span class="dv">${u.bankDetails?.accountHolderName || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Bank complet</span><span class="dv">${u.bankDetails?.isBankDetailsComplete ? '✅' : '❌'}</span></div>
+      <div class="detail-row"><span class="dl">Account holder</span><span class="dv">${u.bankDetails?.accountHolderName || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Bank complete</span><span class="dv">${u.bankDetails?.isBankDetailsComplete ? '✅' : '❌'}</span></div>`}
     </div>
 
     <div class="detail-section">
-      <h4>🚗 Trajets comme driver (${userTrips.length})</h4>
-      ${userTrips.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucun trajet</p>' :
+      <h4>🚗 Trips as driver (${userTrips.length})</h4>
+      ${userTrips.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No trips</p>' :
         userTrips.slice(0, 10).map(t => `
           <div class="detail-list-item" onclick="openTripPanel('${t.id}')">
             <div class="dli-top"><span>${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}</span>${statusBadge(t.status)}</div>
-            <div class="dli-sub">${fmtDate(t.startTime)} · ${fmtMoney(t.pricePerSeat)}/place · ${t.reservedSeats||0}/${t.totalSeats||'?'} places</div>
+            <div class="dli-sub">${fmtDate(t.startTime)} · ${fmtMoney(t.pricePerSeat)}/seat · ${t.reservedSeats||0}/${t.totalSeats||'?'} seats</div>
           </div>
         `).join('')}
     </div>
 
     <div class="detail-section">
-      <h4>💳 Paiements comme passager (${userPayments.length})</h4>
-      ${userPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucun paiement</p>' :
+      <h4>💳 Payments as passenger (${userPayments.length})</h4>
+      ${userPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No payments</p>' :
         userPayments.slice(0, 10).map(p => `
           <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
             <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-            <div class="dli-sub">${fmtDate(p.paymentDate)} · Stripe: ${p.stripePaymentId || '—'}</div>
+            <div class="dli-sub">${fmtDate(p.paymentDate)} · Stripe: ${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</div>
           </div>
         `).join('')}
     </div>
 
     <div class="detail-section">
       <h4>🔄 Wallet Transactions (${userWalletTx.length})</h4>
-      ${userWalletTx.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucune transaction</p>' :
+      ${userWalletTx.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No transactions</p>' :
         userWalletTx.slice(0, 15).map(w => `
           <div class="detail-list-item">
             <div class="dli-top"><span class="wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
@@ -1023,49 +1055,49 @@ function openTripPanel(tripId) {
 
   let html = `
     <div class="detail-section">
-      <h4>🗺️ Trajet</h4>
-      <div class="detail-row"><span class="dl">De</span><span class="dv">${t.startLocation?.city || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Vers</span><span class="dv">${t.endLocation?.city || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Départ</span><span class="dv mono">${fmtDate(t.startTime)}</span></div>
-      <div class="detail-row"><span class="dl">Arrivée</span><span class="dv mono">${fmtDate(t.endTime)}</span></div>
-      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusBadge(t.status)}</span></div>
+      <h4>🗺️ Trip</h4>
+      <div class="detail-row"><span class="dl">From</span><span class="dv">${t.startLocation?.city || '—'}</span></div>
+      <div class="detail-row"><span class="dl">To</span><span class="dv">${t.endLocation?.city || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Departure</span><span class="dv mono">${fmtDate(t.startTime)}</span></div>
+      <div class="detail-row"><span class="dl">Arrival</span><span class="dv mono">${fmtDate(t.endTime)}</span></div>
+      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(t.status)}</span></div>
       <div class="detail-row"><span class="dl">Description</span><span class="dv">${t.description || '—'}</span></div>
     </div>
 
     <div class="detail-section">
-      <h4>🪑 Places & Prix</h4>
-      <div class="detail-row"><span class="dl">Prix / place</span><span class="dv mono">${fmtMoney(t.pricePerSeat)}</span></div>
-      <div class="detail-row"><span class="dl">Total affiché</span><span class="dv mono">${fmtMoney(t.totalPassengerTripPrice)}</span></div>
-      <div class="detail-row"><span class="dl">Places totales</span><span class="dv">${t.totalSeats || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Places réservées</span><span class="dv">${t.reservedSeats || 0}</span></div>
-      <div class="detail-row"><span class="dl">Places dispo</span><span class="dv">${t.availableSeats ?? '—'}</span></div>
+      <h4>🪑 Seats & Price</h4>
+      <div class="detail-row"><span class="dl">Price / seat</span><span class="dv mono">${fmtMoney(t.pricePerSeat)}</span></div>
+      <div class="detail-row"><span class="dl">Displayed total</span><span class="dv mono">${fmtMoney(t.totalPassengerTripPrice)}</span></div>
+      <div class="detail-row"><span class="dl">Total seats</span><span class="dv">${t.totalSeats || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Reserved seats</span><span class="dv">${t.reservedSeats || 0}</span></div>
+      <div class="detail-row"><span class="dl">Available seats</span><span class="dv">${t.availableSeats ?? '—'}</span></div>
     </div>
 
     <div class="detail-section">
       <h4>👤 Driver</h4>
       <div class="detail-list-item" onclick="openUserPanel('${driverId}')">
         <div class="dli-top"><span>${getUserName(t.driverID)}</span></div>
-        <div class="dli-sub">${getUserEmail(t.driverID)} · Cliquer pour voir le profil</div>
+        <div class="dli-sub">${getUserEmail(t.driverID)} · Click to view profile</div>
       </div>
     </div>
 
     <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
-      <h4 style="border:none;color:var(--orange);">💸 Calcul payout driver</h4>
-      <div class="detail-row"><span class="dl">Total paiements reçus</span><span class="dv mono">${fmtMoney(totalReceived)}</span></div>
+      <h4 style="border:none;color:var(--orange);">💸 Driver payout calculation</h4>
+      <div class="detail-row"><span class="dl">Total payments received</span><span class="dv mono">${fmtMoney(totalReceived)}</span></div>
       <div class="detail-row"><span class="dl">Commission 15%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(commission15)}</span></div>
       <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
-        <span class="dl" style="font-weight:700;color:var(--dark);">À virer au driver</span>
+        <span class="dl" style="font-weight:700;color:var(--dark);">To pay the driver</span>
         <span class="dv mono" style="font-size:22px;color:var(--orange);font-weight:700;">${fmtMoney(driverPayout)}</span>
       </div>
     </div>
 
     <div class="detail-section">
-      <h4>💳 Paiements liés (${tripPayments.length})</h4>
-      ${tripPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">Aucun paiement</p>' :
+      <h4>💳 Linked payments (${tripPayments.length})</h4>
+      ${tripPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No payments</p>' :
         tripPayments.map(p => `
           <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
             <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-            <div class="dli-sub">${getUserName(p.passengerId)} · Stripe: ${p.stripePaymentId || '—'}</div>
+            <div class="dli-sub">${getUserName(p.passengerId)} · Stripe: ${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</div>
           </div>
         `).join('')}
     </div>
@@ -1074,9 +1106,9 @@ function openTripPanel(tripId) {
     <div class="detail-section">
       <h4>📊 Commission Records</h4>
       ${tripCommissions.map(c => `
-        <div class="detail-row"><span class="dl">Montant commission</span><span class="dv mono">${fmtMoney(c.amount)}</span></div>
-        <div class="detail-row"><span class="dl">% commission</span><span class="dv">${c.commissionPercentage || '—'}%</span></div>
-        <div class="detail-row"><span class="dl">Prix total trajet</span><span class="dv mono">${fmtMoney(c.tripTotalPrice)}</span></div>
+        <div class="detail-row"><span class="dl">Commission amount</span><span class="dv mono">${fmtMoney(c.amount)}</span></div>
+        <div class="detail-row"><span class="dl">Commission %</span><span class="dv">${c.commissionPercentage || '—'}%</span></div>
+        <div class="detail-row"><span class="dl">Trip total price</span><span class="dv mono">${fmtMoney(c.tripTotalPrice)}</span></div>
         <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(c.commissionDate)}</span></div>
       `).join('')}
     </div>` : ''}
@@ -1094,26 +1126,26 @@ function openPaymentPanel(paymentId) {
 
   let html = `
     <div class="detail-section">
-      <h4>💳 Paiement</h4>
-      <div class="detail-row"><span class="dl">Montant</span><span class="dv mono" style="font-size:22px;font-weight:700">${fmtMoney(p.amount)}</span></div>
-      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusBadge(p.paymentStatus)}</span></div>
+      <h4>💳 Payment</h4>
+      <div class="detail-row"><span class="dl">Amount</span><span class="dv mono" style="font-size:22px;font-weight:700">${fmtMoney(p.amount)}</span></div>
+      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(p.paymentStatus)}</span></div>
       <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(p.paymentDate)}</span></div>
-      <div class="detail-row"><span class="dl">Stripe ID</span><span class="dv mono" style="font-size:11px;">${p.stripePaymentId || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Stripe ID</span><span class="dv mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</span></div>
       <div class="detail-row"><span class="dl">Discount</span><span class="dv mono">${p.discountAmount ? fmtMoney(p.discountAmount) : '—'}</span></div>
       <div class="detail-row"><span class="dl">Promo code</span><span class="dv">${p.promoCodeUsed || '—'}</span></div>
     </div>
 
     <div class="detail-section">
-      <h4>👤 Passager</h4>
+      <h4>👤 Passenger</h4>
       <div class="detail-list-item" onclick="openUserPanel('${passengerId}')">
         <div class="dli-top"><span>${getUserName(p.passengerId)}</span></div>
-        <div class="dli-sub">${getUserEmail(p.passengerId)} · Cliquer pour voir le profil</div>
+        <div class="dli-sub">${getUserEmail(p.passengerId)} · Click to view profile</div>
       </div>
     </div>
 
     ${trip ? `
     <div class="detail-section">
-      <h4>🚗 Trajet associé</h4>
+      <h4>🚗 Associated trip</h4>
       <div class="detail-list-item" onclick="openTripPanel('${trip.id}')">
         <div class="dli-top"><span>${trip.startLocation?.city || '?'} → ${trip.endLocation?.city || '?'}</span>${statusBadge(trip.status)}</div>
         <div class="dli-sub">Driver: ${getUserName(trip.driverID)} · ${fmtDate(trip.startTime)}</div>
@@ -1121,18 +1153,18 @@ function openPaymentPanel(paymentId) {
     </div>` : ''}
 
     <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
-      <h4 style="border:none;color:var(--orange);">💸 Décomposition</h4>
-      <div class="detail-row"><span class="dl">Montant payé</span><span class="dv mono">${fmtMoney(p.amount)}</span></div>
-      <div class="detail-row"><span class="dl">Dont frais réservation ($4)</span><span class="dv mono">$4.00</span></div>
-      <div class="detail-row"><span class="dl">Prix trajet (hors frais)</span><span class="dv mono">${fmtMoney((p.amount||0) - 4)}</span></div>
+      <h4 style="border:none;color:var(--orange);">💸 Breakdown</h4>
+      <div class="detail-row"><span class="dl">Amount paid</span><span class="dv mono">${fmtMoney(p.amount)}</span></div>
+      <div class="detail-row"><span class="dl">Incl. booking fee ($4)</span><span class="dv mono">$4.00</span></div>
+      <div class="detail-row"><span class="dl">Trip price (excl. fees)</span><span class="dv mono">${fmtMoney((p.amount||0) - 4)}</span></div>
       <div class="detail-row"><span class="dl">Commission 15%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(((p.amount||0) - 4) * 0.15)}</span></div>
       <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
-        <span class="dl" style="font-weight:700;">Part driver</span>
+        <span class="dl" style="font-weight:700;">Driver share</span>
         <span class="dv mono" style="font-size:18px;color:var(--orange);font-weight:700;">${fmtMoney(((p.amount||0) - 4) * 0.85)}</span>
       </div>
     </div>
   `;
-  openPanel('Paiement ' + (p.stripePaymentId || p.id.substring(0, 8)), html);
+  openPanel('Payment ' + (PRIVACY_MODE ? p.id.substring(0, 8) : (p.stripePaymentId || p.id.substring(0, 8))), html);
 }
 
 function openWalletTxPanel(txId) {
@@ -1142,23 +1174,23 @@ function openWalletTxPanel(txId) {
 
   let html = `
     <div class="detail-section">
-      <h4>🔄 Transaction Wallet</h4>
-      <div class="detail-row"><span class="dl">Montant</span><span class="dv mono wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}" style="font-size:22px;">${fmtMoney(w.amount)}</span></div>
+      <h4>🔄 Wallet Transaction</h4>
+      <div class="detail-row"><span class="dl">Amount</span><span class="dv mono wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}" style="font-size:22px;">${fmtMoney(w.amount)}</span></div>
       <div class="detail-row"><span class="dl">Type</span><span class="dv">${statusBadge(w.transactionType)}</span></div>
-      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusBadge(w.status)}</span></div>
+      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(w.status)}</span></div>
       <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(w.transactionDate)}</span></div>
       <div class="detail-row"><span class="dl">Description</span><span class="dv">${w.description || '—'}</span></div>
     </div>
 
     <div class="detail-section">
-      <h4>👤 Utilisateur</h4>
+      <h4>👤 User</h4>
       <div class="detail-list-item" onclick="openUserPanel('${userId}')">
         <div class="dli-top"><span>${getUserName(w.userId)}</span></div>
-        <div class="dli-sub">${getUserEmail(w.userId)} · Cliquer pour voir le profil</div>
+        <div class="dli-sub">${getUserEmail(w.userId)} · Click to view profile</div>
       </div>
     </div>
   `;
-  openPanel('Transaction Wallet', html);
+  openPanel('Wallet Transaction', html);
 }
 
 // ── Verification ──
@@ -1193,33 +1225,37 @@ function renderVerifTable(type) {
 
   const tbody = document.getElementById('verifTableBody');
   if (!users.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>Aucun dossier dans cette catégorie</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No cases in this category</p></td></tr>';
     return;
   }
 
   tbody.innerHTML = users.map(u => {
-    const name = u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+    const name = PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—');
     const hasDoc = !!u.idPhoto;
     const statusHtml = u.isVerified
-      ? '<span class="badge-status badge-green">Vérifié ✓</span>'
+      ? '<span class="badge-status badge-green">Verified ✓</span>'
       : hasDoc
-        ? '<span class="badge-status badge-yellow">En attente</span>'
-        : '<span class="badge-status badge-gray">Pas de pièce</span>';
+        ? '<span class="badge-status badge-yellow">Pending</span>'
+        : '<span class="badge-status badge-gray">No document</span>';
 
-    const thumbHtml = hasDoc
-      ? `<img src="${u.idPhoto}" alt="ID" style="height:36px;width:54px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);cursor:pointer;" onerror="this.outerHTML='<span style=\\'color:var(--red);font-size:12px\\'>Erreur image</span>'">`
-      : '<span style="color:var(--gray-300);font-size:12px;">—</span>';
+    const thumbHtml = PRIVACY_MODE
+      ? '<span style="color:var(--gray-400);font-size:12px;">🔒</span>'
+      : hasDoc
+        ? `<img src="${u.idPhoto}" alt="ID" style="height:36px;width:54px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);cursor:pointer;" onerror="this.outerHTML='<span style=\\'color:var(--red);font-size:12px\\'>Image error</span>'">`
+        : '<span style="color:var(--gray-300);font-size:12px;">—</span>';
 
-    const actionHtml = !u.isVerified && hasDoc
-      ? `<button class="filter-btn" style="background:var(--green-bg);border-color:var(--green);color:var(--green);" onclick="event.stopPropagation();approveUser('${u.id}')">Approuver ✓</button>`
-      : u.isVerified
-        ? '<span style="color:var(--green);font-size:12px;font-weight:600;">✓ Approuvé</span>'
-        : '—';
+    const actionHtml = PRIVACY_MODE
+      ? '—'
+      : !u.isVerified && hasDoc
+        ? `<button class="filter-btn" style="background:var(--green-bg);border-color:var(--green);color:var(--green);" onclick="event.stopPropagation();approveUser('${u.id}')">Approve ✓</button>`
+        : u.isVerified
+          ? '<span style="color:var(--green);font-size:12px;font-weight:600;">✓ Approved</span>'
+          : '—';
 
     return `
       <tr onclick="openVerificationPanel('${u.id}')">
         <td><strong>${name}</strong></td>
-        <td class="mono" style="font-size:12px;">${u.email || '—'}</td>
+        <td class="mono" style="font-size:12px;">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
         <td>${thumbHtml}</td>
         <td class="mono">${fmtDate(u.created_time)}</td>
         <td>${statusHtml}</td>
@@ -1231,61 +1267,67 @@ function renderVerifTable(type) {
 function openVerificationPanel(uid) {
   const u = usersMap[uid];
   if (!u) return;
-  const name = u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || uid;
+  const name = PRIVACY_MODE ? pseudoName(uid) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || uid);
 
   const statusHtml = u.isVerified
-    ? '<span class="badge-status badge-green" style="font-size:13px;">✓ Vérifié</span>'
+    ? '<span class="badge-status badge-green" style="font-size:13px;">✓ Verified</span>'
     : u.idPhoto
-      ? '<span class="badge-status badge-yellow" style="font-size:13px;">En attente de review</span>'
-      : '<span class="badge-status badge-gray" style="font-size:13px;">Pas de pièce soumise</span>';
+      ? '<span class="badge-status badge-yellow" style="font-size:13px;">Pending review</span>'
+      : '<span class="badge-status badge-gray" style="font-size:13px;">No document submitted</span>';
 
-  const photoSection = u.idPhoto ? `
+  const photoSection = PRIVACY_MODE ? `
     <div class="detail-section">
-      <h4>📄 Pièce d'identité</h4>
-      <div class="verify-photo-wrap" onclick="window.open('${u.idPhoto}', '_blank')">
-        <img src="${u.idPhoto}" alt="Pièce d'identité" onerror="this.parentElement.innerHTML='<p style=\\'padding:24px;color:var(--red);font-size:13px;\\'>Impossible de charger l\\'image</p>'">
+      <h4>📄 ID document</h4>
+      <div style="background:var(--gray-100);border-radius:10px;padding:32px;text-align:center;color:var(--gray-400);font-size:13px;">
+        🔒 Hidden (privacy mode)
       </div>
-      <p style="font-size:11px;color:var(--gray-400);text-align:center;margin-top:-8px;margin-bottom:16px;">Cliquer pour ouvrir en plein écran</p>
+    </div>` : u.idPhoto ? `
+    <div class="detail-section">
+      <h4>📄 ID document</h4>
+      <div class="verify-photo-wrap" onclick="window.open('${u.idPhoto}', '_blank')">
+        <img src="${u.idPhoto}" alt="ID document" onerror="this.parentElement.innerHTML='<p style=\\'padding:24px;color:var(--red);font-size:13px;\\'>Could not load image</p>'">
+      </div>
+      <p style="font-size:11px;color:var(--gray-400);text-align:center;margin-top:-8px;margin-bottom:16px;">Click to open full screen</p>
     </div>` : `
     <div class="detail-section">
-      <h4>📄 Pièce d'identité</h4>
+      <h4>📄 ID document</h4>
       <div style="background:var(--gray-100);border-radius:10px;padding:32px;text-align:center;color:var(--gray-400);font-size:13px;">
-        Aucun document soumis
+        No document submitted
       </div>
     </div>`;
 
-  const actionsSection = !u.isVerified && u.idPhoto ? `
+  const actionsSection = !PRIVACY_MODE && !u.isVerified && u.idPhoto ? `
     <div class="detail-section">
       <h4>Actions</h4>
-      <button class="btn-approve" id="btnApprove-${uid}" onclick="approveUser('${uid}')">✓ Approuver la pièce</button>
-      <button class="btn-reject" id="btnReject-${uid}" onclick="rejectIdPhoto('${uid}')">✗ Rejeter la pièce</button>
-      <p style="font-size:11px;color:var(--gray-400);margin-top:8px;text-align:center;">Rejeter supprime le document et notifie l'utilisateur de re-soumettre</p>
+      <button class="btn-approve" id="btnApprove-${uid}" onclick="approveUser('${uid}')">✓ Approve document</button>
+      <button class="btn-reject" id="btnReject-${uid}" onclick="rejectIdPhoto('${uid}')">✗ Reject document</button>
+      <p style="font-size:11px;color:var(--gray-400);margin-top:8px;text-align:center;">Rejecting deletes the document and notifies the user to resubmit</p>
     </div>` : u.isVerified ? `
     <div class="detail-section">
       <div style="background:var(--green-bg);border-radius:10px;padding:16px;text-align:center;color:var(--green);font-weight:600;">
-        ✓ Utilisateur vérifié
+        ✓ User verified
       </div>
     </div>` : '';
 
   const html = `
     <div class="detail-section">
-      <h4>Informations</h4>
-      <div class="detail-row"><span class="dl">Nom</span><span class="dv">${name}</span></div>
-      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${u.email || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Téléphone</span><span class="dv mono">${u.phone_number || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Inscrit le</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
-      <div class="detail-row"><span class="dl">Statut</span><span class="dv">${statusHtml}</span></div>
+      <h4>Information</h4>
+      <div class="detail-row"><span class="dl">Name</span><span class="dv">${name}</span></div>
+      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number) : (u.phone_number || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
+      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusHtml}</span></div>
     </div>
     ${photoSection}
     ${actionsSection}
   `;
-  openPanel('Vérification — ' + name, html);
+  openPanel('Verification — ' + name, html);
 }
 
 async function approveUser(uid) {
   const btnApprove = document.getElementById('btnApprove-' + uid);
   const btnReject = document.getElementById('btnReject-' + uid);
-  if (btnApprove) { btnApprove.disabled = true; btnApprove.textContent = 'Enregistrement...'; }
+  if (btnApprove) { btnApprove.disabled = true; btnApprove.textContent = 'Saving...'; }
   if (btnReject) btnReject.disabled = true;
 
   try {
@@ -1294,7 +1336,7 @@ async function approveUser(uid) {
     const u = usersMap[uid];
     if (u) u.isVerified = true;
     if (btnApprove) {
-      btnApprove.textContent = '✓ Approuvé !';
+      btnApprove.textContent = '✓ Approved!';
       btnApprove.style.background = '#16a34a';
     }
     setTimeout(() => {
@@ -1303,18 +1345,18 @@ async function approveUser(uid) {
       updateVerifBadge();
     }, 700);
   } catch (err) {
-    alert('Erreur lors de la mise à jour : ' + err.message);
-    if (btnApprove) { btnApprove.disabled = false; btnApprove.textContent = '✓ Approuver la pièce'; }
+    alert('Error while updating: ' + err.message);
+    if (btnApprove) { btnApprove.disabled = false; btnApprove.textContent = '✓ Approve document'; }
     if (btnReject) btnReject.disabled = false;
   }
 }
 
 async function rejectIdPhoto(uid) {
-  if (!confirm('Rejeter la pièce d\'identité ? L\'utilisateur devra en soumettre une nouvelle.')) return;
+  if (!confirm('Reject the ID document? The user will have to submit a new one.')) return;
   const btnApprove = document.getElementById('btnApprove-' + uid);
   const btnReject = document.getElementById('btnReject-' + uid);
   if (btnApprove) btnApprove.disabled = true;
-  if (btnReject) { btnReject.disabled = true; btnReject.textContent = 'Enregistrement...'; }
+  if (btnReject) { btnReject.disabled = true; btnReject.textContent = 'Saving...'; }
 
   try {
     await db.collection('users').doc(uid).update({ idPhoto: null });
@@ -1326,9 +1368,9 @@ async function rejectIdPhoto(uid) {
       updateVerifBadge();
     }, 300);
   } catch (err) {
-    alert('Erreur : ' + err.message);
+    alert('Error: ' + err.message);
     if (btnApprove) btnApprove.disabled = false;
-    if (btnReject) { btnReject.disabled = false; btnReject.textContent = '✗ Rejeter la pièce'; }
+    if (btnReject) { btnReject.disabled = false; btnReject.textContent = '✗ Reject document'; }
   }
 }
 
@@ -1371,7 +1413,7 @@ function renderStatsPage() {
   // ── Trip status breakdown ──
   const tripStatuses = {};
   allTrips.forEach(t => {
-    const s = t.status || 'inconnu';
+    const s = t.status || 'unknown';
     tripStatuses[s] = (tripStatuses[s] || 0) + 1;
   });
   const tripStatusEntries = Object.entries(tripStatuses).sort((a, b) => b[1] - a[1]);
@@ -1398,24 +1440,24 @@ function renderStatsPage() {
     <!-- KPI Row -->
     <div class="stat-row" style="margin-bottom:24px;">
       <div class="stat-card stat-card-accent">
-        <div class="stat-label">Utilisateurs total</div>
+        <div class="stat-label">Total users</div>
         <div class="stat-value">${totalUsers}</div>
-        <div class="stat-sub">${driverCount} drivers · ${passengerCount} passagers</div>
+        <div class="stat-sub">${driverCount} drivers · ${passengerCount} passengers</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Taux de vérification</div>
+        <div class="stat-label">Verification rate</div>
         <div class="stat-value">${totalUsers ? Math.round(verifiedUsers/totalUsers*100) : 0}<span style="font-size:16px;font-weight:400">%</span></div>
-        <div class="stat-sub">${verifiedUsers} / ${totalUsers} vérifiés</div>
+        <div class="stat-sub">${verifiedUsers} / ${totalUsers} verified</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Revenue total</div>
+        <div class="stat-label">Total revenue</div>
         <div class="stat-value" style="font-size:22px;">${fmtMoney(totalRevenue)}</div>
-        <div class="stat-sub">Commission : ${fmtMoney(totalCommission)}</div>
+        <div class="stat-sub">Commission: ${fmtMoney(totalCommission)}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Wallet en circulation</div>
+        <div class="stat-label">Wallet in circulation</div>
         <div class="stat-value" style="font-size:22px;">${fmtMoney(totalWalletCirculation)}</div>
-        <div class="stat-sub">${allTrips.length} trajets · ${allPayments.length} paiements</div>
+        <div class="stat-sub">${allTrips.length} trips · ${allPayments.length} payments</div>
       </div>
     </div>
 
@@ -1423,10 +1465,10 @@ function renderStatsPage() {
       <!-- Nationality breakdown -->
       <div class="table-card">
         <div class="table-header">
-          <h3>Nationalités des utilisateurs</h3>
-          <span style="font-size:12px;color:var(--gray-400);">${usersWithNat} renseignées / ${totalUsers}</span>
+          <h3>User nationalities</h3>
+          <span style="font-size:12px;color:var(--gray-400);">${usersWithNat} provided / ${totalUsers}</span>
         </div>
-        ${natEntries.length === 0 ? `<div class="empty"><p>Aucune nationalité renseignée</p></div>` :
+        ${natEntries.length === 0 ? `<div class="empty"><p>No nationality provided</p></div>` :
           natEntries.map(e => {
             const pct = Math.round(e.count / totalUsers * 100);
             const barW = Math.round(e.count / maxNatCount * 100);
@@ -1445,7 +1487,7 @@ function renderStatsPage() {
         ${noNatCount > 0 ? `
           <div class="nat-row" style="opacity:0.5;">
             <div class="nat-flag"><span>❓</span></div>
-            <div class="nat-country" style="color:var(--gray-400);">Non renseignée</div>
+            <div class="nat-country" style="color:var(--gray-400);">Not provided</div>
             <div class="nat-bar-wrap"><div class="nat-bar" style="width:${Math.round(noNatCount/totalUsers*100)}%;background:var(--gray-300);"></div></div>
             <div class="nat-count">${noNatCount}</div>
             <div class="nat-pct">${Math.round(noNatCount/totalUsers*100)}%</div>
@@ -1457,7 +1499,7 @@ function renderStatsPage() {
 
         <!-- Trip status breakdown -->
         <div class="table-card">
-          <div class="table-header"><h3>Statuts des trajets</h3><span style="font-size:12px;color:var(--gray-400);">${allTrips.length} total</span></div>
+          <div class="table-header"><h3>Trip statuses</h3><span style="font-size:12px;color:var(--gray-400);">${allTrips.length} total</span></div>
           ${tripStatusEntries.map(([status, count]) => {
             const pct = Math.round(count / allTrips.length * 100);
             return `
@@ -1471,13 +1513,13 @@ function renderStatsPage() {
 
         <!-- User profile breakdown -->
         <div class="table-card">
-          <div class="table-header"><h3>Profils utilisateurs</h3></div>
+          <div class="table-header"><h3>User profiles</h3></div>
           ${[
-            { label: 'Drivers actifs', count: driverCount, color: '#22C55E' },
-            { label: 'Passagers actifs', count: passengerCount, color: '#3B82F6' },
-            { label: 'Les deux', count: bothCount, color: '#FF833D' },
-            { label: 'Profil incomplet (bank)', count: bankComplete, color: '#F59E0B' },
-            { label: 'Aucun rôle', count: neitherCount, color: '#B0B0B0' },
+            { label: 'Active drivers', count: driverCount, color: '#22C55E' },
+            { label: 'Active passengers', count: passengerCount, color: '#3B82F6' },
+            { label: 'Both', count: bothCount, color: '#FF833D' },
+            { label: 'Incomplete profile (bank)', count: bankComplete, color: '#F59E0B' },
+            { label: 'No role', count: neitherCount, color: '#B0B0B0' },
           ].map(r => {
             const pct = totalUsers ? Math.round(r.count / totalUsers * 100) : 0;
             return `
@@ -1507,7 +1549,7 @@ function advancedSearch() {
   const q = document.getElementById('advancedSearchInput').value.trim().toLowerCase();
   if (!q) return;
   const container = document.getElementById('searchResults');
-  container.innerHTML = '<div class="loading"><span class="spinner"></span> Recherche...</div>';
+  container.innerHTML = '<div class="loading"><span class="spinner"></span> Searching...</div>';
 
   setTimeout(() => {
     let results = [];
@@ -1522,9 +1564,9 @@ function advancedSearch() {
       u.id.toLowerCase().includes(q)
     );
     matchedUsers.forEach(u => results.push({
-      type: '👤 Utilisateur',
-      title: u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
-      sub: `${u.email} · Wallet: ${fmtMoney(u.walletBalance||0)}`,
+      type: '👤 User',
+      title: PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email),
+      sub: `${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')} · Wallet: ${fmtMoney(u.walletBalance||0)}`,
       onclick: `openUserPanel('${u.id}')`
     }));
 
@@ -1534,9 +1576,9 @@ function advancedSearch() {
       getUserEmail(p.passengerId).toLowerCase().includes(q)
     );
     matchedPayments.forEach(p => results.push({
-      type: '💳 Paiement',
+      type: '💳 Payment',
       title: `${fmtMoney(p.amount)} — ${getUserName(p.passengerId)}`,
-      sub: `Stripe: ${p.stripePaymentId || '—'} · ${fmtDate(p.paymentDate)}`,
+      sub: `Stripe: ${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')} · ${fmtDate(p.paymentDate)}`,
       onclick: `openPaymentPanel('${p.id}')`
     }));
 
@@ -1547,19 +1589,19 @@ function advancedSearch() {
       getUserName(t.driverID).toLowerCase().includes(q)
     );
     matchedTrips.forEach(t => results.push({
-      type: '🚗 Trajet',
+      type: '🚗 Trip',
       title: `${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}`,
       sub: `Driver: ${getUserName(t.driverID)} · ${fmtDate(t.startTime)}`,
       onclick: `openTripPanel('${t.id}')`
     }));
 
     if (results.length === 0) {
-      container.innerHTML = '<div class="empty"><p>Aucun résultat pour "' + q + '"</p></div>';
+      container.innerHTML = '<div class="empty"><p>No results for "' + q + '"</p></div>';
       return;
     }
 
     container.innerHTML = `
-      <p style="font-size:13px;color:var(--gray-400);margin-bottom:16px;">${results.length} résultat(s) trouvé(s)</p>
+      <p style="font-size:13px;color:var(--gray-400);margin-bottom:16px;">${results.length} result(s) found</p>
       ${results.map(r => `
         <div class="detail-list-item" onclick="${r.onclick}">
           <div class="dli-top"><span>${r.title}</span><span style="font-size:11px;color:var(--gray-400);">${r.type}</span></div>
