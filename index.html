@@ -258,6 +258,13 @@ tbody tr:hover { background: var(--orange-light); }
 
 /* Empty state */
 .empty { text-align: center; padding: 48px 24px; color: var(--gray-400); }
+
+/* Due-diligence view (dd custom claim): only the metrics page is reachable */
+body.dd-mode .nav-item[data-page]:not([data-page="dd"]) { display: none; }
+body.dd-mode .global-search { display: none; }
+.dd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
+@media (max-width: 900px) { .dd-grid { grid-template-columns: 1fr; } }
+.dd-note { font-size: 12px; color: var(--gray-400); margin: -8px 0 20px; }
 .empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
 .empty p { font-size: 14px; }
 
@@ -410,6 +417,11 @@ tbody tr:hover { background: var(--orange-light); }
       Statistics
     </div>
 
+    <div class="nav-item" data-page="dd" onclick="switchPage('dd')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+      Due diligence
+    </div>
+
     <div class="nav-section" style="margin-top:24px;">Tools</div>
 
     <div class="nav-item" data-page="search" onclick="switchPage('search')">
@@ -428,6 +440,7 @@ tbody tr:hover { background: var(--orange-light); }
     <div class="topbar">
       <h1 id="topbarTitle">Overview</h1>
       <span id="privacyPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Privacy mode</span>
+      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">📊 Due diligence view</span>
       <div class="global-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="globalSearchInput" placeholder="Quick search: email, Stripe ID, name..." onkeydown="if(event.key==='Enter') globalSearch()">
@@ -589,6 +602,11 @@ tbody tr:hover { background: var(--orange-light); }
         <div id="statsContent"><div class="loading"><span class="spinner"></span> Loading statistics...</div></div>
       </div>
 
+      <!-- DUE DILIGENCE — aggregated metrics only, see scripts/07_publish_dd_metrics.js -->
+      <div class="page" id="page-dd">
+        <div id="ddContent"><div class="loading"><span class="spinner"></span> Loading metrics...</div></div>
+      </div>
+
       <!-- SEARCH -->
       <div class="page" id="page-search">
         <div class="table-card" style="padding:32px;">
@@ -649,6 +667,7 @@ let natMap = {};   // id -> nationality data
 // spec's "Known limitations".
 const FULL_ACCESS_EMAILS = ['valpdu44@gmail.com', 'valentin+dashboard@rooride.app', 'marion+admin@rooride.app'];
 let PRIVACY_MODE = false;
+let DD_MODE = false; // true for accounts carrying the dd custom claim (see checkAdmin)
 
 function pseudoName(uid) {
   return 'User ' + (uid ? String(uid).slice(-4).toUpperCase() : '????');
@@ -683,6 +702,11 @@ function doLogin() {
 }
 
 async function checkAdmin(user) {
+  // Due-diligence accounts (custom claim dd=true) are denied by the Firestore
+  // rules on users/payments/wallet/chats — route them before any read.
+  const token = await user.getIdTokenResult();
+  if (token.claims.dd === true) { showDDApp(user); return; }
+
   // Check Firestore for admin role
   const doc = await db.collection('users').doc(user.uid).get();
   if (doc.exists) {
@@ -705,8 +729,21 @@ function showApp(user) {
   loadAllData();
 }
 
+function showDDApp(user) {
+  DD_MODE = true;
+  document.body.classList.add('dd-mode');
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('sidebarUserEmail').textContent = user.email;
+  document.getElementById('ddPill').style.display = 'inline-flex';
+  switchPage('dd');
+}
+
 function doLogout() {
   auth.signOut().then(() => {
+    DD_MODE = false;
+    document.body.classList.remove('dd-mode');
+    document.getElementById('ddPill').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('appShell').style.display = 'none';
   });
@@ -716,6 +753,101 @@ function doLogout() {
 auth.onAuthStateChanged(user => {
   if (user) checkAdmin(user);
 });
+
+// ── Due diligence metrics ──
+// Aggregated, non-personal figures published by scripts/07_publish_dd_metrics.js
+// into dd_metrics/latest. The only page a dd-claimed account can use; staff can
+// open it too, to preview exactly what the buyer sees.
+async function loadDDMetrics() {
+  const el = document.getElementById('ddContent');
+  try {
+    const snap = await db.collection('dd_metrics').doc('latest').get();
+    if (!snap.exists) { el.innerHTML = '<div class="empty">No metrics published yet.</div>'; return; }
+    el.innerHTML = renderDDMetrics(snap.data());
+  } catch (e) {
+    el.innerHTML = `<div class="empty">Could not load metrics: ${e.message}</div>`;
+  }
+}
+
+function renderDDMetrics(m) {
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const num = n => (n == null ? '—' : Number(n).toLocaleString('en-AU'));
+  const aud = n => (n == null ? '—' : 'A$' + Number(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+  const day = iso => (iso ? new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+  const pct = v => (v == null ? '—' : v + '%');
+
+  const u = m.users || {}, t = m.trips || {}, pay = m.payments || {}, e = m.engagement || {};
+  const p = pay.payments || {}, c = pay.commissionRecords || {}, w = pay.walletTransactions || {}, r = pay.revenueModel || {};
+  const part = e.participation || {}, chat = e.chat || {}, rev = e.reviews || {};
+  const inv = (m.inventory || {}).counts || {};
+
+  const stat = (label, value, sub, accent) => `
+    <div class="stat-card${accent ? ' stat-card-accent' : ''}">
+      <div class="stat-label">${esc(label)}</div>
+      <div class="stat-value">${value}</div>
+      ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
+    </div>`;
+  const bars = (rows, labelOf, valueOf) => {
+    if (!rows.length) return '<div class="empty">No data</div>';
+    const max = Math.max(1, ...rows.map(valueOf));
+    return rows.map(x => `
+      <div style="display:flex;align-items:center;gap:12px;padding:5px 0;">
+        <span class="mono" style="width:110px;font-size:12px;color:var(--gray-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(labelOf(x))}</span>
+        <div class="nat-bar-wrap"><div class="nat-bar" style="width:${(valueOf(x) / max * 100).toFixed(1)}%"></div></div>
+        <span style="width:56px;text-align:right;font-size:13px;font-weight:600;">${num(valueOf(x))}</span>
+      </div>`).join('');
+  };
+  const card = (title, body) => `<div class="table-card"><div class="table-header"><h3>${esc(title)}</h3></div><div style="padding:8px 20px 14px;">${body}</div></div>`;
+  const tableCard = (title, head, rows) => `<div class="table-card"><div class="table-header"><h3>${esc(title)}</h3></div>
+    <table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.length ? rows.map(row => `<tr>${row.map(v => `<td>${v}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${head.length}" class="empty">No data</td></tr>`}</tbody></table></div>`;
+  const dist = obj => Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+
+  return `
+    <p class="dd-note">Aggregated figures only — no personal data. Extracted ${day(m.extractedAt)} · published ${day(m.publishedAt)}.</p>
+    <div class="stat-row">
+      ${stat('Registered users', num(u.total), `${num(u.verified)} ID-verified (${pct(u.verificationRatePct)})`, true)}
+      ${stat('Users with ≥1 trip or booking', num(part.cohortAnyTrip), `${pct(part.cohortPctOfUsers)} of registered · ${num(part.activeDrivers)} drivers · ${num(part.activePassengers)} passengers`)}
+      ${stat('Trips published', num(t.total), `${num(t.withPassenger)} with at least one passenger (${pct(t.withPassengerPct)})`)}
+      ${stat('Paid bookings', num(p.successCount), `${num(p.distinctPassengers)} distinct passengers`)}
+    </div>
+    <div class="stat-row">
+      ${stat('Gross booking value', aud(p.successGMV_AUD), `avg basket ${aud(p.avgBasketAUD)}`)}
+      ${stat('Rooride revenue (est.)', aud(r.estTotalRoorideRevenueAUD), `${aud(r.recordedCommissionAUD)} commission + ${aud(r.estBookingFeeRevenueAUD_viaPayments)} booking fees`)}
+      ${stat('Commission rate', pct(c.avgCommissionPct), `on ${aud(c.sumTripTotalPriceAUD)} of trip value · booking fee ${aud(r.bookingFeePerSeatAUD)}/seat`)}
+      ${stat('Wallet in circulation', aud((u.wallet || {}).sumPositiveAUD), `${num((u.wallet || {}).usersWithPositiveBalance)} users with a positive balance`)}
+    </div>
+    <div class="dd-grid">
+      ${card('New sign-ups per month', bars((u.acquisition || {}).byMonth || [], x => x.month, x => x.new))}
+      ${card('Trips published per month', bars(t.monthlyByStartTime || [], x => x.month, x => x.trips))}
+    </div>
+    <div class="dd-grid">
+      ${tableCard('Top routes', ['Route', 'Trips'], (t.topRoutes || []).map(x => [esc(x.route), num(x.count)]))}
+      ${card('Nationalities (top 10)', bars((u.nationalities || {}).top10 || [], x => x.country, x => x.count))}
+    </div>
+    <div class="dd-grid">
+      ${tableCard('Paid bookings per month', ['Month', 'Gross booking value'], (p.monthlyGMV || []).map(x => [esc(x.month), aud(x.gmv)]))}
+      ${card('Trip status', bars(dist(t.statusDistribution), x => x[0], x => x[1]))}
+    </div>
+    <div class="dd-grid">
+      ${tableCard('Engagement', ['Metric', 'Value'], [
+        ['Chat conversations', num(chat.conversations_chatsCollection)],
+        ['Chat messages', num(chat.messages)],
+        ['Avg messages per conversation', num(chat.avgMessagesPerConversation)],
+        ['Reviews', rev.count ? num(rev.count) : '0 — review feature unused'],
+        ['Users with bank details', `${num(u.bankComplete)} (${pct(u.bankCompletePctOfTotal)})`],
+      ])}
+      ${tableCard('Wallet & commissions', ['Metric', 'Value'], [
+        ['Commission records', `${num(c.count)} (${num(c.nonZeroCount)} non-zero)`],
+        ['Total commission', aud(c.totalCommissionAUD)],
+        ...Object.entries(w.byType || {}).map(([k, v]) => [`Wallet · ${esc(k)}`, `${num(v.n)} · ${aud(v.sumAUD)}`]),
+        ['Seats offered / reserved', `${num((t.seats || {}).sumTotalSeats)} / ${num((t.seats || {}).sumReservedSeats)} (${pct((t.seats || {}).globalFillRatePct)} fill)`],
+        ['Price per seat (median / avg)', `${aud((t.pricePerSeat || {}).median)} / ${aud((t.pricePerSeat || {}).avg)}`],
+      ])}
+    </div>
+    ${tableCard('Firestore collections', ['Collection', 'Documents'], Object.entries(inv).sort((a, b) => (b[1].count || 0) - (a[1].count || 0)).map(([k, v]) => [esc(k), num(v.count)]))}
+  `;
+}
 
 // ── Navigation ──
 function switchPage(page) {
@@ -727,11 +859,12 @@ function switchPage(page) {
   const titles = {
     overview: 'Overview', users: 'Users', trips: 'Trips',
     payments: 'Payments', wallet: 'Wallet Transactions', search: 'Advanced search',
-    stats: 'Statistics', verification: 'ID Verification'
+    stats: 'Statistics', verification: 'ID Verification', dd: 'Due diligence'
   };
   document.getElementById('topbarTitle').textContent = titles[page] || page;
   if (page === 'stats') renderStatsPage();
   if (page === 'verification') renderVerificationPage();
+  if (page === 'dd') loadDDMetrics();
 }
 
 // ── Load Data ──
