@@ -675,7 +675,7 @@ let natMap = {};   // id -> nationality data
 // privacy mode (sensitive data hidden). NOTE: this is display-side only and is
 // bypassable by a technical user via DevTools / direct Firestore access — see the
 // spec's "Known limitations".
-const FULL_ACCESS_EMAILS = ['valpdu44@gmail.com', 'valentin+dashboard@rooride.app', 'marion+admin@rooride.app'];
+const FULL_ACCESS_EMAILS = ['valpdu44@gmail.com', 'valentin@rooride.app', 'marion@rooride.app'];
 let PRIVACY_MODE = false;
 let DD_MODE = false; // true for accounts carrying the dd custom claim (see checkAdmin)
 // Where each page loads its rows from. dd accounts are switched to the pseudonymised
@@ -775,22 +775,32 @@ function doResetPassword() {
 }
 
 async function checkAdmin(user) {
-  // Due-diligence accounts (custom claim dd=true) are denied by the Firestore
-  // rules on users/payments/wallet/chats — route them before any read.
-  const token = await user.getIdTokenResult();
+  // Access is decided on custom claims and nothing else. Claims are set through the
+  // Admin SDK (scripts/staff_account.js, scripts/dd_account.js) and cannot be written
+  // from a client — unlike users/<uid>.isRoorideStaff, which this gate used to read
+  // and which the Firestore rules let any signed-in account set on itself.
+  // Forced refresh so a claim granted since this session began is picked up.
+  const token = await user.getIdTokenResult(true);
+
+  // Due-diligence accounts (dd=true) are denied by the Firestore rules on
+  // users/payments/wallet/chats — route them before any read.
   if (token.claims.dd === true) { showDDApp(user); return; }
 
-  // Check Firestore for admin role
-  const doc = await db.collection('users').doc(user.uid).get();
-  if (doc.exists) {
-    const data = doc.data();
-    if (data.isRoorideStaff === true || data.role === 'admin') {
-      showApp(user);
-      return;
-    }
-  }
-  // Fallback: allow any authenticated user (remove this in production)
-  showApp(user);
+  if (token.claims.staff === true) { showApp(user); return; }
+
+  denyAccess();
+}
+
+// No third branch: an account without a claim is signed out, not shown the app.
+function denyAccess() {
+  auth.signOut().finally(() => {
+    document.getElementById('appShell').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+    const errEl = document.getElementById('loginError');
+    errEl.style.color = '';
+    errEl.textContent = 'This account does not have access to the admin dashboard.';
+    errEl.style.display = 'block';
+  });
 }
 
 function showApp(user) {
@@ -836,7 +846,8 @@ function doLogout() {
 
 // Auto-login check
 auth.onAuthStateChanged(user => {
-  if (user) checkAdmin(user);
+  // A revoked session makes the forced token refresh throw; treat that as no access.
+  if (user) checkAdmin(user).catch(() => denyAccess());
 });
 
 // ── Due diligence metrics ──
