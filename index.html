@@ -543,9 +543,9 @@ body.dd-mode .dd-banner { display: flex; }
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Passenger</th><th>Amount</th><th>Promo</th><th>Stripe ID</th><th>Status</th>
+              <th>Date</th><th>Passenger</th><th>Paid</th><th>Trip price</th><th>Commission</th><th>Driver share</th><th>Status</th>
             </tr></thead>
-            <tbody id="paymentsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
+            <tbody id="paymentsTableBody"><tr><td colspan="7" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1027,11 +1027,20 @@ async function loadWalletTransactions() {
   const snap = await db.collection(SRC.wallet).orderBy('transactionDate', 'desc').get();
   allWalletTx = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   renderWalletTable(allWalletTx);
+  refreshPaymentsBreakdown();
 }
 
 async function loadCommissions() {
   const snap = await db.collection(SRC.commissions).get();
   allCommissions = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
+  refreshPaymentsBreakdown();
+}
+
+// The payments table renders before commissions and wallet transactions arrive,
+// so its breakdown cross-check has to be replayed once they do. Goes through the
+// filter so an in-flight search isn't cleared.
+function refreshPaymentsBreakdown() {
+  if (allPayments.length) filterPaymentsTable();
 }
 
 // ── Helpers ──
@@ -1112,19 +1121,73 @@ function renderTripsTable(trips) {
   `).join('');
 }
 
+// Revenue model: a flat booking fee per payment, then commission on what's left.
+const BOOKING_FEE_AUD = 4;
+const COMMISSION_RATE = 0.15;
+
+const isRefundedPayment = (status) => /refund/i.test(status || '');
+
+/**
+ * Single source of truth for the payment breakdown, shared by the table and the panel.
+ * Returns amounts in payment order: trip price → commission → what lands in the driver's wallet.
+ * Refunded payments carry no breakdown: the commission record drops to 0 while the wallet
+ * credit keeps its gross value (reversals are booked as separate transactions), so any
+ * figure we showed there would be misleading.
+ */
+function paymentBreakdown(p) {
+  if (isRefundedPayment(p.paymentStatus)) {
+    return { tripPrice: null, commission: null, driverShare: null, warning: null };
+  }
+  const amount = Number(p.amount) || 0;
+  const tripPrice = +(amount - BOOKING_FEE_AUD).toFixed(2);
+  const commission = +(tripPrice * COMMISSION_RATE).toFixed(2);
+  const driverShare = +(tripPrice - commission).toFixed(2);
+
+  // Cross-check against what was actually recorded, so the dashboard can't drift silently
+  // if the rate or the booking fee changes in production. Only meaningful when the trip
+  // carries a single payment: wallet earnings are booked per trip, not per payment.
+  let warning = null;
+  const tripId = getRefId(p.tripId);
+  if (tripId && allPayments.filter(x => getRefId(x.tripId) === tripId).length === 1) {
+    const gaps = [];
+    const record = allCommissions.find(c => getRefId(c.tripId) === tripId);
+    if (record && record.amount != null && Math.abs(Number(record.amount) - commission) > 0.01) {
+      gaps.push(`recorded commission ${fmtMoney(record.amount)}`);
+    }
+    const trip = allTrips.find(t => t.id === tripId);
+    const driverId = trip ? getRefId(trip.driverID) : null;
+    const earning = driverId ? allWalletTx.find(w =>
+      getRefId(w.relatedTrip) === tripId &&
+      getRefId(w.userId) === driverId &&
+      /tripearning/i.test(w.transactionType || '')) : null;
+    if (earning && earning.amount != null && Math.abs(Number(earning.amount) - driverShare) > 0.01) {
+      gaps.push(`wallet credit ${fmtMoney(earning.amount)}`);
+    }
+    if (gaps.length) warning = 'Differs from Firestore: ' + gaps.join(' · ');
+  }
+  return { tripPrice, commission, driverShare, warning };
+}
+
+const dashCell = '<td class="mono" style="color:var(--gray-300)">—</td>';
+const warnMark = (w) => w ? ` <span title="${w}" style="cursor:help">⚠</span>` : '';
+
 function renderPaymentsTable(payments) {
   const tbody = document.getElementById('paymentsTableBody');
-  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No payments found</p></td></tr>'; return; }
-  tbody.innerHTML = payments.map(p => `
+  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty"><p>No payments found</p></td></tr>'; return; }
+  tbody.innerHTML = payments.map(p => {
+    const b = paymentBreakdown(p);
+    return `
     <tr onclick="openPaymentPanel('${p.id}')">
       <td class="mono">${fmtDate(p.paymentDate)}</td>
       <td>${getUserName(p.passengerId)}<br><span style="font-size:11px;color:var(--gray-400)">${getUserEmail(p.passengerId)}</span></td>
       <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
-      <td>${p.promoCodeUsed ? '<span class="badge-status badge-blue">' + p.promoCodeUsed + '</span>' : '—'}</td>
-      <td class="mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</td>
+      ${b.tripPrice === null ? dashCell : `<td class="mono">${fmtMoney(b.tripPrice)}</td>`}
+      ${b.commission === null ? dashCell : `<td class="mono" style="color:var(--red)">− ${fmtMoney(b.commission)}</td>`}
+      ${b.driverShare === null ? dashCell : `<td class="mono" style="font-weight:700;color:var(--orange)">${fmtMoney(b.driverShare)}${warnMark(b.warning)}</td>`}
       <td>${statusBadge(p.paymentStatus)}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function renderOverviewPayments(payments) {
@@ -1352,6 +1415,7 @@ function openPaymentPanel(paymentId) {
   const passengerId = getRefId(p.passengerId);
   const tripId = getRefId(p.tripId);
   const trip = allTrips.find(t => t.id === tripId);
+  const b = paymentBreakdown(p);
 
   let html = `
     <div class="detail-section">
@@ -1384,13 +1448,15 @@ function openPaymentPanel(paymentId) {
     <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
       <h4 style="border:none;color:var(--orange);">💸 Breakdown</h4>
       <div class="detail-row"><span class="dl">Amount paid</span><span class="dv mono">${fmtMoney(p.amount)}</span></div>
-      <div class="detail-row"><span class="dl">Incl. booking fee ($4)</span><span class="dv mono">$4.00</span></div>
-      <div class="detail-row"><span class="dl">Trip price (excl. fees)</span><span class="dv mono">${fmtMoney((p.amount||0) - 4)}</span></div>
-      <div class="detail-row"><span class="dl">Commission 15%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(((p.amount||0) - 4) * 0.15)}</span></div>
+      ${b.tripPrice === null ? `
+      <div class="detail-row"><span class="dl">Breakdown</span><span class="dv" style="color:var(--gray-400);font-size:13px;">Not applicable — payment refunded</span></div>` : `
+      <div class="detail-row"><span class="dl">Incl. booking fee ($${BOOKING_FEE_AUD})</span><span class="dv mono">${fmtMoney(BOOKING_FEE_AUD)}</span></div>
+      <div class="detail-row"><span class="dl">Trip price (excl. fees)</span><span class="dv mono">${fmtMoney(b.tripPrice)}</span></div>
+      <div class="detail-row"><span class="dl">Commission ${COMMISSION_RATE * 100}%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(b.commission)}</span></div>
       <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
         <span class="dl" style="font-weight:700;">Driver share</span>
-        <span class="dv mono" style="font-size:18px;color:var(--orange);font-weight:700;">${fmtMoney(((p.amount||0) - 4) * 0.85)}</span>
-      </div>
+        <span class="dv mono" style="font-size:18px;color:var(--orange);font-weight:700;">${fmtMoney(b.driverShare)}${warnMark(b.warning)}</span>
+      </div>`}
     </div>
   `;
   openPanel('Payment ' + (PRIVACY_MODE ? p.id.substring(0, 8) : (p.stripePaymentId || p.id.substring(0, 8))), html);
