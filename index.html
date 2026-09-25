@@ -264,6 +264,11 @@ body.dd-mode .nav-item[data-page="dd"] { display: none; }
 .dd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
 @media (max-width: 900px) { .dd-grid { grid-template-columns: 1fr; } }
 .dd-note { font-size: 12px; color: var(--gray-400); margin: -8px 0 20px; }
+.dd-banner { display: none; align-items: flex-start; gap: 10px; background: var(--gray-50, #FAFAF9); border: 1px solid var(--gray-200); border-left: 3px solid var(--orange); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 12.5px; line-height: 1.5; color: var(--gray-600); }
+body.dd-mode .dd-banner { display: flex; }
+.avatar { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; overflow: hidden; flex: 0 0 auto; vertical-align: middle; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.user-cell { display: flex; align-items: center; gap: 10px; }
 .empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
 .empty p { font-size: 14px; }
 
@@ -362,6 +367,7 @@ body.dd-mode .nav-item[data-page="dd"] { display: none; }
     <input type="password" id="loginPassword" placeholder="Password">
     <button onclick="doLogin()">Sign in</button>
     <p class="login-error" id="loginError"></p>
+    <p style="text-align:center;margin-top:14px;font-size:12.5px;"><a href="#" onclick="doResetPassword();return false;" style="color:var(--gray-400);text-decoration:none;">Set or reset your password</a></p>
   </div>
 </div>
 
@@ -439,7 +445,7 @@ body.dd-mode .nav-item[data-page="dd"] { display: none; }
     <div class="topbar">
       <h1 id="topbarTitle">Overview</h1>
       <span id="privacyPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Privacy mode</span>
-      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Anonymised data</span>
+      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Anonymised · synthetic identities</span>
       <div class="global-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="globalSearchInput" placeholder="Quick search: email, Stripe ID, name..." onkeydown="if(event.key==='Enter') globalSearch()">
@@ -447,6 +453,11 @@ body.dd-mode .nav-item[data-page="dd"] { display: none; }
     </div>
 
     <div class="content">
+
+      <div class="dd-banner">
+        <span style="font-size:15px;line-height:1;">🔒</span>
+        <span><strong>Anonymised dataset.</strong> Names and avatars are <strong>synthetic placeholders</strong>, not real user identities. Every figure, trip, payment, amount and date is real and unmodified. Personal data is excluded: emails, phone numbers, ID documents, bank details, chat contents and precise locations are not part of this dataset.</span>
+      </div>
 
       <!-- OVERVIEW -->
       <div class="page active" id="page-overview">
@@ -673,6 +684,12 @@ const SRC = { users: 'users', trips: 'trips', payments: 'payments', wallet: 'wal
 const SRC_DD = { users: 'dd_users', trips: 'dd_trips', payments: 'dd_payments', wallet: 'dd_walletTransactions', commissions: 'dd_appCommissionRecords' };
 
 function pseudoName(uid) {
+  // In the anonymised view the stored display_name is already a synthetic placeholder
+  // published by scripts/08_publish_dd_snapshot.js — never a real person's name.
+  if (DD_MODE) {
+    const n = usersMap[uid] && usersMap[uid].display_name;
+    if (n) return n;
+  }
   return 'User ' + (uid ? String(uid).slice(-4).toUpperCase() : '????');
 }
 function maskEmail(email) {
@@ -689,6 +706,47 @@ function maskId(val) {
   return val ? '•••' : '—';
 }
 
+// ── HTML escaping ──
+// Every Firestore string is data, never markup. Documents are escaped once on load
+// (escDeep, used by the loaders below) so no render path can inject HTML — trip
+// descriptions and wallet notes are free text typed by app users.
+const ESC_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const esc = v => String(v).replace(/[&<>"']/g, c => ESC_MAP[c]);
+function escDeep(v) {
+  if (typeof v === 'string') return esc(v);
+  if (Array.isArray(v)) return v.map(escDeep);
+  // Plain maps only: Timestamp, DocumentReference and GeoPoint must stay intact.
+  if (v && typeof v === 'object' && v.constructor === Object) {
+    const out = {};
+    for (const k in v) out[k] = escDeep(v[k]);
+    return out;
+  }
+  return v;
+}
+// Filters compare against escaped data, so the query is escaped the same way.
+const escQuery = v => esc(v).toLowerCase();
+
+// ── Avatars ──
+// A photo when there is one, otherwise deterministic initials — so a row reads as a
+// person rather than an id, in the anonymised view as much as the staff one.
+const AVATAR_COLORS = ['#F97316', '#3B82F6', '#22C55E', '#A855F7', '#EF4444', '#14B8A6', '#F59E0B', '#6366F1'];
+function displayName(u) {
+  if (!u) return '—';
+  if (PRIVACY_MODE) return pseudoName(u.id);
+  return u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || '—';
+}
+function avatarHtml(u, px) {
+  const size = px || 28;
+  const initials = (String(displayName(u)).match(/[A-Za-z\u00C0-\u024F]+/g) || []).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+  let h = 0;
+  for (const ch of String((u && u.id) || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const bg = AVATAR_COLORS[h % AVATAR_COLORS.length];
+  const inner = (!PRIVACY_MODE && u && u.photo_url)
+    ? `<img src="${u.photo_url}" alt="" onerror="this.remove()">`
+    : initials;
+  return `<span class="avatar" style="width:${size}px;height:${size}px;background:${bg};font-size:${Math.round(size * 0.38)}px;">${inner}</span>`;
+}
+
 // ── Auth ──
 function doLogin() {
   const email = document.getElementById('loginEmail').value;
@@ -702,6 +760,18 @@ function doLogin() {
       errEl.textContent = 'Error: ' + err.message;
       errEl.style.display = 'block';
     });
+}
+
+// Firebase sends the email and hosts the form; no password ever travels through us.
+// With improved email privacy on, this resolves whether or not the address exists.
+function doResetPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'block';
+  if (!email) { errEl.style.color = ''; errEl.textContent = 'Type your email address above first.'; return; }
+  auth.sendPasswordResetEmail(email)
+    .then(() => { errEl.style.color = 'var(--green)'; errEl.textContent = 'If ' + email + ' has an account, a link to set a password is on its way. Check your inbox and spam folder.'; })
+    .catch(err => { errEl.style.color = ''; errEl.textContent = 'Error: ' + err.message; });
 }
 
 async function checkAdmin(user) {
@@ -745,6 +815,7 @@ function showDDApp(user) {
   document.getElementById('sidebarUserEmail').textContent = user.email;
   const pill = document.getElementById('ddPill');
   pill.style.display = 'inline-flex';
+  document.getElementById('privacyPill').style.display = 'none';
   db.collection('dd_metrics').doc('snapshot').get().then(s => {
     const at = s.exists && s.data().publishedAt;
     if (at) pill.textContent = '🔒 Anonymised data · snapshot ' + new Date(at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -893,13 +964,13 @@ async function loadAllData() {
 
 async function loadNationalities() {
   const snap = await db.collection('nationalities').get();
-  allNationalities = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allNationalities = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   allNationalities.forEach(n => natMap[n.id] = n);
 }
 
 async function loadUsers() {
   const snap = await db.collection(SRC.users).get();
-  allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allUsers = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   allUsers.forEach(u => usersMap[u.id] = u);
   document.getElementById('navCountUsers').textContent = allUsers.length;
   document.getElementById('statUsers').textContent = allUsers.length;
@@ -926,7 +997,7 @@ function updateVerifBadge() {
 
 async function loadTrips() {
   const snap = await db.collection(SRC.trips).orderBy('startTime', 'desc').get();
-  allTrips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allTrips = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   document.getElementById('navCountTrips').textContent = allTrips.length;
   document.getElementById('statTrips').textContent = allTrips.length;
   renderTripsTable(allTrips);
@@ -934,7 +1005,7 @@ async function loadTrips() {
 
 async function loadPayments() {
   const snap = await db.collection(SRC.payments).orderBy('paymentDate', 'desc').get();
-  allPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allPayments = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   document.getElementById('navCountPayments').textContent = allPayments.length;
   document.getElementById('statPayments').textContent = allPayments.length;
   renderPaymentsTable(allPayments);
@@ -943,13 +1014,13 @@ async function loadPayments() {
 
 async function loadWalletTransactions() {
   const snap = await db.collection(SRC.wallet).orderBy('transactionDate', 'desc').get();
-  allWalletTx = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allWalletTx = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   renderWalletTable(allWalletTx);
 }
 
 async function loadCommissions() {
   const snap = await db.collection(SRC.commissions).get();
-  allCommissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  allCommissions = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
 }
 
 // ── Helpers ──
@@ -1003,7 +1074,7 @@ function renderUsersTable(users) {
   if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No users found</p></td></tr>'; return; }
   tbody.innerHTML = users.map(u => `
     <tr onclick="openUserPanel('${u.id}')">
-      <td><strong>${PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—')}</strong></td>
+      <td><div class="user-cell">${avatarHtml(u)}<strong>${displayName(u)}</strong></div></td>
       <td class="mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
       <td><span class="wallet-amount ${(u.walletBalance||0)>0?'wallet-positive':''}">
         ${fmtMoney(u.walletBalance || 0)}
@@ -1076,7 +1147,7 @@ function renderWalletTable(txs) {
 
 // ── Filters ──
 function filterUsersTable() {
-  const q = document.getElementById('usersSearchInput').value.toLowerCase();
+  const q = escQuery(document.getElementById('usersSearchInput').value);
   const filtered = allUsers.filter(u =>
     (u.email || '').toLowerCase().includes(q) ||
     (u.display_name || '').toLowerCase().includes(q) ||
@@ -1095,7 +1166,7 @@ function filterTrips(type, btn) {
 }
 
 function filterPaymentsTable() {
-  const q = document.getElementById('paymentsSearchInput').value.toLowerCase();
+  const q = escQuery(document.getElementById('paymentsSearchInput').value);
   const filtered = allPayments.filter(p =>
     (p.stripePaymentId || '').toLowerCase().includes(q) ||
     getUserName(p.passengerId).toLowerCase().includes(q) ||
@@ -1132,7 +1203,7 @@ function openUserPanel(uid) {
   let html = `
     <div class="detail-section">
       <h4>Information</h4>
-      <div class="detail-row"><span class="dl">Name</span><span class="dv">${PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Name</span><span class="dv"><span class="user-cell" style="justify-content:flex-end;">${avatarHtml(u, 32)}<strong>${displayName(u)}</strong></span></span></div>
       <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</span></div>
       <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number) : (u.phone_number || '—')}</span></div>
       <div class="detail-row"><span class="dl">UID</span><span class="dv mono" style="font-size:11px;">${u.id}</span></div>
@@ -1354,6 +1425,12 @@ function renderVerificationPage() {
   document.getElementById('verifStatNone').textContent = noDoc.length;
   document.getElementById('verifStatRate').innerHTML = (total ? Math.round(verified.length / total * 100) : 0) + '<span style="font-size:16px;font-weight:400">%</span>';
 
+  if (DD_MODE) {
+    const host = document.getElementById('verifStatPending').closest('.stat-row');
+    if (host && !document.getElementById('verifDDNote')) {
+      host.insertAdjacentHTML('afterend', '<p class="dd-note" id="verifDDNote">Identity documents are excluded from the anonymised dataset, so no document previews or approval actions are available here. The counts above are real.</p>');
+    }
+  }
   renderVerifTable(verifFilter);
 }
 
@@ -1401,7 +1478,7 @@ function renderVerifTable(type) {
 
     return `
       <tr onclick="openVerificationPanel('${u.id}')">
-        <td><strong>${name}</strong></td>
+        <td><div class="user-cell">${avatarHtml(u)}<strong>${name}</strong></div></td>
         <td class="mono" style="font-size:12px;">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
         <td>${thumbHtml}</td>
         <td class="mono">${fmtDate(u.created_time)}</td>
@@ -1693,7 +1770,7 @@ function globalSearch() {
 }
 
 function advancedSearch() {
-  const q = document.getElementById('advancedSearchInput').value.trim().toLowerCase();
+  const q = escQuery(document.getElementById('advancedSearchInput').value.trim());
   if (!q) return;
   const container = document.getElementById('searchResults');
   container.innerHTML = '<div class="loading"><span class="spinner"></span> Searching...</div>';
