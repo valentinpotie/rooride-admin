@@ -260,8 +260,7 @@ tbody tr:hover { background: var(--orange-light); }
 .empty { text-align: center; padding: 48px 24px; color: var(--gray-400); }
 
 /* Due-diligence view (dd custom claim): only the metrics page is reachable */
-body.dd-mode .nav-item[data-page]:not([data-page="dd"]) { display: none; }
-body.dd-mode .global-search { display: none; }
+body.dd-mode .nav-item[data-page="dd"] { display: none; }
 .dd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
 @media (max-width: 900px) { .dd-grid { grid-template-columns: 1fr; } }
 .dd-note { font-size: 12px; color: var(--gray-400); margin: -8px 0 20px; }
@@ -440,7 +439,7 @@ body.dd-mode .global-search { display: none; }
     <div class="topbar">
       <h1 id="topbarTitle">Overview</h1>
       <span id="privacyPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Privacy mode</span>
-      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">📊 Due diligence view</span>
+      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Anonymised data</span>
       <div class="global-search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="globalSearchInput" placeholder="Quick search: email, Stripe ID, name..." onkeydown="if(event.key==='Enter') globalSearch()">
@@ -668,6 +667,10 @@ let natMap = {};   // id -> nationality data
 const FULL_ACCESS_EMAILS = ['valpdu44@gmail.com', 'valentin+dashboard@rooride.app', 'marion+admin@rooride.app'];
 let PRIVACY_MODE = false;
 let DD_MODE = false; // true for accounts carrying the dd custom claim (see checkAdmin)
+// Where each page loads its rows from. dd accounts are switched to the pseudonymised
+// snapshot collections published by scripts/08_publish_dd_snapshot.js.
+const SRC = { users: 'users', trips: 'trips', payments: 'payments', wallet: 'walletTransactions', commissions: 'appCommissionRecords' };
+const SRC_DD = { users: 'dd_users', trips: 'dd_trips', payments: 'dd_payments', wallet: 'dd_walletTransactions', commissions: 'dd_appCommissionRecords' };
 
 function pseudoName(uid) {
   return 'User ' + (uid ? String(uid).slice(-4).toUpperCase() : '????');
@@ -730,18 +733,29 @@ function showApp(user) {
 }
 
 function showDDApp(user) {
+  // Same dashboard as staff, but every collection holding personal data is read
+  // from its pseudonymised snapshot, and the display-side masking stays on as a
+  // second layer. The Firestore rules deny this token on the originals anyway.
   DD_MODE = true;
+  PRIVACY_MODE = true;
+  Object.assign(SRC, SRC_DD);
   document.body.classList.add('dd-mode');
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('sidebarUserEmail').textContent = user.email;
-  document.getElementById('ddPill').style.display = 'inline-flex';
-  switchPage('dd');
+  const pill = document.getElementById('ddPill');
+  pill.style.display = 'inline-flex';
+  db.collection('dd_metrics').doc('snapshot').get().then(s => {
+    const at = s.exists && s.data().publishedAt;
+    if (at) pill.textContent = '🔒 Anonymised data · snapshot ' + new Date(at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }).catch(() => {});
+  loadAllData();
 }
 
 function doLogout() {
   auth.signOut().then(() => {
     DD_MODE = false;
+    Object.assign(SRC, { users: 'users', trips: 'trips', payments: 'payments', wallet: 'walletTransactions', commissions: 'appCommissionRecords' });
     document.body.classList.remove('dd-mode');
     document.getElementById('ddPill').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
@@ -756,8 +770,8 @@ auth.onAuthStateChanged(user => {
 
 // ── Due diligence metrics ──
 // Aggregated, non-personal figures published by scripts/07_publish_dd_metrics.js
-// into dd_metrics/latest. The only page a dd-claimed account can use; staff can
-// open it too, to preview exactly what the buyer sees.
+// into dd_metrics/latest. Staff-only tab (hidden for dd accounts, which use the
+// anonymised full dashboard instead — see showDDApp).
 async function loadDDMetrics() {
   const el = document.getElementById('ddContent');
   try {
@@ -884,7 +898,7 @@ async function loadNationalities() {
 }
 
 async function loadUsers() {
-  const snap = await db.collection('users').get();
+  const snap = await db.collection(SRC.users).get();
   allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   allUsers.forEach(u => usersMap[u.id] = u);
   document.getElementById('navCountUsers').textContent = allUsers.length;
@@ -911,7 +925,7 @@ function updateVerifBadge() {
 }
 
 async function loadTrips() {
-  const snap = await db.collection('trips').orderBy('startTime', 'desc').get();
+  const snap = await db.collection(SRC.trips).orderBy('startTime', 'desc').get();
   allTrips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   document.getElementById('navCountTrips').textContent = allTrips.length;
   document.getElementById('statTrips').textContent = allTrips.length;
@@ -919,7 +933,7 @@ async function loadTrips() {
 }
 
 async function loadPayments() {
-  const snap = await db.collection('payments').orderBy('paymentDate', 'desc').get();
+  const snap = await db.collection(SRC.payments).orderBy('paymentDate', 'desc').get();
   allPayments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   document.getElementById('navCountPayments').textContent = allPayments.length;
   document.getElementById('statPayments').textContent = allPayments.length;
@@ -928,13 +942,13 @@ async function loadPayments() {
 }
 
 async function loadWalletTransactions() {
-  const snap = await db.collection('walletTransactions').orderBy('transactionDate', 'desc').get();
+  const snap = await db.collection(SRC.wallet).orderBy('transactionDate', 'desc').get();
   allWalletTx = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   renderWalletTable(allWalletTx);
 }
 
 async function loadCommissions() {
-  const snap = await db.collection('appCommissionRecords').get();
+  const snap = await db.collection(SRC.commissions).get();
   allCommissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
