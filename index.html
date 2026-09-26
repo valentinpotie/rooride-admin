@@ -806,18 +806,20 @@ function denyAccess() {
 
 // Staff view: reached only with the staff claim, so nothing is masked.
 function showApp(user) {
+  resetState();
   PRIVACY_MODE = false;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('sidebarUserEmail').textContent = user.email;
   document.getElementById('privacyPill').style.display = 'none';
-  loadAllData();
+  loadAllDataGuarded();
 }
 
 function showDDApp(user) {
   // Same dashboard as staff, but every collection holding personal data is read
   // from its pseudonymised snapshot, and the display-side masking stays on as a
   // second layer. The Firestore rules deny this token on the originals anyway.
+  resetState();
   DD_MODE = true;
   PRIVACY_MODE = true;
   Object.assign(SRC, SRC_DD);
@@ -832,13 +834,15 @@ function showDDApp(user) {
     const at = s.exists && s.data().publishedAt;
     if (at) pill.textContent = '🔒 Anonymised data · snapshot ' + new Date(at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
   }).catch(() => {});
-  loadAllData();
+  loadAllDataGuarded();
 }
 
 function doLogout() {
   auth.signOut().then(() => {
     DD_MODE = false;
+    PRIVACY_MODE = false;
     Object.assign(SRC, { users: 'users', trips: 'trips', payments: 'payments', wallet: 'walletTransactions', commissions: 'appCommissionRecords' });
+    resetState();
     document.body.classList.remove('dd-mode');
     document.getElementById('ddPill').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
@@ -966,6 +970,21 @@ function switchPage(page) {
 }
 
 // ── Load Data ──
+// Everything the previous session left behind. Signing in as another account must not
+// inherit it: the dd view and the staff view read different collections, so a stale render
+// can show one account the rows fetched for the other. Clearing the DOM too, because a
+// failed load leaves whatever was painted last on screen.
+function resetState() {
+  allUsers = []; allTrips = []; allPayments = []; allWalletTx = [];
+  allCommissions = []; allNationalities = [];
+  usersMap = {}; natMap = {}; bannedMap = {};
+  ['usersTableBody', 'tripsTableBody', 'paymentsTableBody', 'walletTableBody', 'verifTableBody', 'overviewPaymentsBody']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<tr><td colspan="8" class="loading"><span class="spinner"></span> Loading...</td></tr>'; });
+  ['statUsers', 'statTrips', 'statPayments', 'statWallet', 'navCountUsers', 'navCountTrips', 'navCountPayments']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<span class="spinner"></span>'; });
+  const panel = document.getElementById('sidePanel'); if (panel) panel.classList.remove('open');
+}
+
 async function loadAllData() {
   await loadBanned();
   await loadUsers();
@@ -974,6 +993,15 @@ async function loadAllData() {
   loadWalletTransactions();
   loadCommissions();
   loadNationalities();
+}
+
+// A denied read used to reject silently and leave the page as it was. Say so instead.
+function loadAllDataGuarded() {
+  return loadAllData().catch(e => {
+    const body = document.getElementById('usersTableBody');
+    if (body) body.innerHTML = `<tr><td colspan="8" class="empty">Could not load data: ${esc(e.message)}</td></tr>`;
+    console.error('loadAllData', e);
+  });
 }
 
 async function loadNationalities() {
