@@ -1188,6 +1188,45 @@ function paymentBreakdown(p) {
   return { tripPrice, commission, driverShare, warning };
 }
 
+/**
+ * Commission booked for a trip. `appCommissionRecords` is the source of truth: it holds what
+ * dispatchTripFunds actually wrote — pricePerSeat × reservedSeats × COMMISSION_RATE, with the
+ * booking fees deliberately left outside the commission base — including the zeroes written when
+ * a payment is refunded. The formula is only a fallback for trips closed before a record existed;
+ * `source` lets the caller say which of the two it ended up showing.
+ */
+function tripCommission(tripId) {
+  const records = allCommissions.filter(c => getRefId(c.tripId) === tripId);
+  if (records.length) {
+    return { amount: +records.reduce((s, c) => s + (Number(c.amount) || 0), 0).toFixed(2), source: 'record' };
+  }
+  const trip = allTrips.find(t => t.id === tripId);
+  const base = (Number(trip && trip.pricePerSeat) || 0) * (Number(trip && trip.reservedSeats) || 0);
+  return { amount: +(base * COMMISSION_RATE).toFixed(2), source: base ? 'estimate' : 'none' };
+}
+
+/**
+ * What the driver was actually credited for a trip: the tripEarning net of any refundReversal.
+ * Reading the ledger rather than recomputing 85% means a reversed credit shows as reversed.
+ */
+function tripDriverCredit(tripId, driverId) {
+  const txs = allWalletTx.filter(w => getRefId(w.relatedTrip) === tripId && getRefId(w.userId) === driverId);
+  if (!txs.length) return { amount: null, source: 'none' };
+  return { amount: +txs.reduce((s, w) => s + (Number(w.amount) || 0), 0).toFixed(2), source: 'ledger' };
+}
+
+/** Money actually kept from a payment — a refunded one brought nothing in. */
+const paymentNetAmount = (p) => isRefundedPayment(p.paymentStatus) ? 0 : (Number(p.amount) || 0);
+
+/** Amount handed back to the passenger, preferring the recorded refund over the paid amount. */
+const paymentRefundedAmount = (p) => isRefundedPayment(p.paymentStatus)
+  ? (Number(p.refundedAmount != null ? p.refundedAmount : p.amount) || 0)
+  : 0;
+
+const estMark = (source) => source === 'estimate'
+  ? ' <span title="No appCommissionRecords document for this trip — recomputed from pricePerSeat × reservedSeats." style="cursor:help;color:var(--gray-400)">(est.)</span>'
+  : '';
+
 const dashCell = '<td class="mono" style="color:var(--gray-300)">—</td>';
 const warnMark = (w) => w ? ` <span title="${w}" style="cursor:help">⚠</span>` : '';
 
@@ -1291,9 +1330,6 @@ function openUserPanel(uid) {
   const userPayments = allPayments.filter(p => getRefId(p.passengerId) === uid);
   const userWalletTx = allWalletTx.filter(w => getRefId(w.userId) === uid);
 
-  // Calculate driver payout
-  const driverPayout = (u.walletBalance || 0) * 0.85;
-
   let html = `
     <div class="detail-section">
       <h4>Information</h4>
@@ -1361,10 +1397,16 @@ function openTripPanel(tripId) {
   const tripPayments = allPayments.filter(p => getRefId(p.tripId) === tripId);
   const tripCommissions = allCommissions.filter(c => getRefId(c.tripId) === tripId);
 
-  // Calculate payout
-  const totalReceived = tripPayments.reduce((s, p) => s + (p.amount || 0), 0);
-  const commission15 = totalReceived * 0.15;
-  const driverPayout = totalReceived - commission15;
+  // Payout. Gross and net differ once a payment is refunded: the money came in and went back
+  // out, so it feeds neither the commission nor what the driver is owed. The commission comes
+  // from the booked record and the driver's side from the wallet ledger, so this panel reports
+  // what happened instead of recomputing 15% of everything that ever landed.
+  const totalReceived = tripPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+  const totalRefunded = +tripPayments.reduce((s, p) => s + paymentRefundedAmount(p), 0).toFixed(2);
+  const netReceived = +(totalReceived - totalRefunded).toFixed(2);
+  const commission = tripCommission(tripId);
+  const credited = tripDriverCredit(tripId, driverId);
+  const driverPayout = credited.amount != null ? credited.amount : +(netReceived - commission.amount).toFixed(2);
 
   let html = `
     <div class="detail-section">
@@ -1397,9 +1439,11 @@ function openTripPanel(tripId) {
     <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
       <h4 style="border:none;color:var(--orange);">💸 Driver payout calculation</h4>
       <div class="detail-row"><span class="dl">Total payments received</span><span class="dv mono">${fmtMoney(totalReceived)}</span></div>
-      <div class="detail-row"><span class="dl">Commission 15%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(commission15)}</span></div>
+      ${totalRefunded ? `<div class="detail-row"><span class="dl">Refunded to passengers</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(totalRefunded)}</span></div>
+      <div class="detail-row"><span class="dl">Net received</span><span class="dv mono">${fmtMoney(netReceived)}</span></div>` : ''}
+      <div class="detail-row"><span class="dl">Commission ${COMMISSION_RATE * 100}%${estMark(commission.source)}</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(commission.amount)}</span></div>
       <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
-        <span class="dl" style="font-weight:700;color:var(--dark);">To pay the driver</span>
+        <span class="dl" style="font-weight:700;color:var(--dark);">${credited.amount != null ? 'Credited to the driver' : 'To pay the driver'}</span>
         <span class="dv mono" style="font-size:22px;color:var(--orange);font-weight:700;">${fmtMoney(driverPayout)}</span>
       </div>
     </div>
@@ -1704,9 +1748,15 @@ function renderStatsPage() {
   const totalUsers = allUsers.length;
   const verifiedUsers = allUsers.filter(u => u.isVerified).length;
   const bankComplete = allUsers.filter(u => u.bankDetails?.isBankDetailsComplete).length;
-  const totalRevenue = allPayments.filter(p => (p.paymentStatus||'').toLowerCase().includes('paid') || (p.paymentStatus||'').toLowerCase().includes('success') || (p.paymentStatus||'').toLowerCase().includes('completed'))
-    .reduce((s, p) => s + (p.amount || 0), 0);
-  const totalCommission = totalRevenue * 0.15;
+  // `processed` is the status the app writes (PaymentStatus.processed) and `refunded` the one the
+  // reconciliation scripts write. The previous substring test looked for paid/success/completed,
+  // matched neither, and silently reported $0 of revenue. Refunds are netted off instead.
+  const totalRevenue = +allPayments.reduce((s, p) => s + paymentNetAmount(p), 0).toFixed(2);
+  const totalRefundedAll = +allPayments.reduce((s, p) => s + paymentRefundedAmount(p), 0).toFixed(2);
+  // Commission as booked in appCommissionRecords, not a percentage of revenue: the two are not
+  // the same number, because booking fees sit outside the commission base and a refund zeroes
+  // the record.
+  const totalCommission = +allCommissions.reduce((s, c) => s + (Number(c.amount) || 0), 0).toFixed(2);
 
   // ── Nationality breakdown ──
   // The user's nationality field can be a DocumentReference, a string (doc id), or a country string
@@ -1772,9 +1822,9 @@ function renderStatsPage() {
         <div class="stat-sub">${verifiedUsers} / ${totalUsers} verified</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total revenue</div>
+        <div class="stat-label">Net revenue</div>
         <div class="stat-value" style="font-size:22px;">${fmtMoney(totalRevenue)}</div>
-        <div class="stat-sub">Commission: ${fmtMoney(totalCommission)}</div>
+        <div class="stat-sub">Commission booked: ${fmtMoney(totalCommission)}${totalRefundedAll ? ` · ${fmtMoney(totalRefundedAll)} refunded` : ''}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">Wallet in circulation</div>
