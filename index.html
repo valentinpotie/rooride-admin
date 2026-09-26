@@ -671,11 +671,11 @@ let usersMap = {}; // uid -> user data
 let natMap = {};   // id -> nationality data
 
 // ── Privacy mode ──
-// Emails listed here get FULL access. Any other logged-in email is forced into
-// privacy mode (sensitive data hidden). NOTE: this is display-side only and is
-// bypassable by a technical user via DevTools / direct Firestore access — see the
-// spec's "Known limitations".
-const FULL_ACCESS_EMAILS = ['valpdu44@gmail.com', 'valentin@rooride.app', 'marion@rooride.app'];
+// Masks identities in the rendered page. It follows the account's custom claim, not an
+// email list: showApp is only reached with staff=true, showDDApp only with dd=true. An
+// allowlist here used to decide it, and silently masked staff accounts whose address was
+// not in the list. Display-side only either way — what actually withholds the data from a
+// dd account is the Firestore rules.
 let PRIVACY_MODE = false;
 let DD_MODE = false; // true for accounts carrying the dd custom claim (see checkAdmin)
 // Where each page loads its rows from. dd accounts are switched to the pseudonymised
@@ -803,12 +803,13 @@ function denyAccess() {
   });
 }
 
+// Staff view: reached only with the staff claim, so nothing is masked.
 function showApp(user) {
-  PRIVACY_MODE = !FULL_ACCESS_EMAILS.includes((user.email || '').toLowerCase());
+  PRIVACY_MODE = false;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('sidebarUserEmail').textContent = user.email;
-  document.getElementById('privacyPill').style.display = PRIVACY_MODE ? 'inline-flex' : 'none';
+  document.getElementById('privacyPill').style.display = 'none';
   loadAllData();
 }
 
