@@ -668,6 +668,7 @@ let allWalletTx = [];
 let allCommissions = [];
 let allNationalities = [];
 let usersMap = {}; // uid -> user data
+let bannedMap = {}; // uid -> bannedUsers doc, mirror of the Auth `disabled` flag
 let natMap = {};   // id -> nationality data
 
 // ── Privacy mode ──
@@ -966,6 +967,7 @@ function switchPage(page) {
 
 // ── Load Data ──
 async function loadAllData() {
+  await loadBanned();
   await loadUsers();
   loadTrips();
   loadPayments();
@@ -979,6 +981,23 @@ async function loadNationalities() {
   allNationalities = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   allNationalities.forEach(n => natMap[n.id] = n);
 }
+
+// The Auth `disabled` flag is invisible from a browser, so scripts/ban_user.js mirrors
+// every ban into bannedUsers/. Staff-only by the rules, so dd sessions are skipped —
+// and a failure here must never cost us the rest of the dashboard.
+async function loadBanned() {
+  bannedMap = {};
+  if (PRIVACY_MODE) return;
+  try {
+    const snap = await db.collection('bannedUsers').get();
+    snap.docs.forEach(d => bannedMap[d.id] = escDeep({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.warn('bannedUsers unreadable, Banned badges hidden:', e.message);
+  }
+}
+
+const isBanned = uid => !!bannedMap[uid];
+const bannedBadge = uid => isBanned(uid) ? ' <span class="badge-status badge-red">Banned</span>' : '';
 
 async function loadUsers() {
   const snap = await db.collection(SRC.users).get();
@@ -1095,7 +1114,7 @@ function renderUsersTable(users) {
   if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No users found</p></td></tr>'; return; }
   tbody.innerHTML = users.map(u => `
     <tr onclick="openUserPanel('${u.id}')">
-      <td><div class="user-cell">${avatarHtml(u)}<strong>${displayName(u)}</strong></div></td>
+      <td><div class="user-cell">${avatarHtml(u)}<strong>${displayName(u)}</strong>${bannedBadge(u.id)}</div></td>
       <td class="mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
       <td><span class="wallet-amount ${(u.walletBalance||0)>0?'wallet-positive':''}">
         ${fmtMoney(u.walletBalance || 0)}
@@ -1284,6 +1303,7 @@ function openUserPanel(uid) {
       <div class="detail-row"><span class="dl">UID</span><span class="dv mono" style="font-size:11px;">${u.id}</span></div>
       <div class="detail-row"><span class="dl">Verified</span><span class="dv">${u.isVerified ? '✅ Yes' : '❌ No'}</span></div>
       <div class="detail-row"><span class="dl">Staff</span><span class="dv">${u.isRoorideStaff ? '✅ Yes' : '❌ No'}</span></div>
+      ${isBanned(u.id) ? `<div class="detail-row"><span class="dl">Banned</span><span class="dv"><span class="badge-status badge-red">Yes</span> <span class="mono" style="font-size:11px;color:var(--gray-400);">${fmtDate(bannedMap[u.id].bannedAt)} · ${bannedMap[u.id].bannedBy || '—'}</span></span></div>` : ''}
       <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
     </div>
 
