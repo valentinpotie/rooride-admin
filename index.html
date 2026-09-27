@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --orange: #FF833D;
@@ -77,16 +78,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--gray-100); color: v
   background: var(--gray-900); padding: 20px 0; display: flex; flex-direction: column;
   z-index: 100;
 }
-.sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px; margin-bottom: 32px; }
-.sidebar-logo .logo-sm {
-  width: 34px; height: 34px; background: var(--orange); border-radius: 9px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; color: white; font-size: 16px;
-}
-.sidebar-logo span { color: white; font-weight: 700; font-size: 16px; }
-.sidebar-logo .badge {
-  font-size: 10px; background: rgba(255,131,61,0.2); color: var(--orange);
-  padding: 2px 7px; border-radius: 4px; font-weight: 600; letter-spacing: 0.5px;
+.sidebar-logo { display: flex; align-items: center; gap: 11px; padding: 0 20px; margin-bottom: 32px; }
+.sidebar-logo .logo-sm { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
+.sidebar-logo .logo-lines { min-width: 0; }
+.sidebar-logo .logo-name { color: white; font-weight: 700; font-size: 15.5px; line-height: 1.2; }
+.sidebar-logo .logo-user {
+  font-size: 11.5px; color: var(--gray-400); margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 175px;
 }
 
 .nav-section { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; padding: 0 20px; margin-bottom: 8px; margin-top: 8px; }
@@ -121,30 +119,30 @@ body { font-family: 'DM Sans', sans-serif; background: var(--gray-100); color: v
 }
 
 /* Topbar */
-.topbar {
+.topbar-removed {
   height: var(--topbar-h); background: var(--white); border-bottom: 1px solid var(--gray-200);
   display: flex; align-items: center; padding: 0 28px; gap: 16px; flex-shrink: 0;
 }
 .topbar h1 { font-size: 18px; font-weight: 700; }
 
-.global-search {
-  margin-left: auto; position: relative; width: 360px;
-}
+.global-search { position: relative; width: 100%; margin-bottom: 12px; }
 .global-search input {
-  width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px;
-  padding: 10px 14px 10px 38px; font-family: inherit; font-size: 13px;
-  outline: none; transition: border-color 0.2s; background: var(--gray-100);
+  width: 100%; border: 1.5px solid var(--gray-700, #3A3A3A); border-radius: 10px;
+  padding: 9px 12px 9px 34px; font-family: inherit; font-size: 13px;
+  outline: none; transition: border-color 0.2s; background: rgba(255,255,255,0.06); color: var(--white);
 }
-.global-search input:focus { border-color: var(--orange); background: var(--white); }
-.global-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray-400); width: 16px; height: 16px; }
+.global-search input::placeholder { color: var(--gray-400); }
+.global-search input:focus { border-color: var(--orange); background: rgba(255,255,255,0.12); }
+.global-search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--gray-400); width: 15px; height: 15px; }
+.sidebar-bottom [id$="Pill"] { margin: 0 0 10px !important; font-size: 11px !important; }
 
 /* Content scroll area */
 .content {
-  flex: 1; overflow-y: auto; padding: 24px 28px 40px;
+  flex: 1; overflow-y: auto; padding: 26px 28px 40px;
 }
 
 /* Stat cards */
-.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .stat-card {
   background: var(--white); border-radius: 14px; padding: 20px 22px;
   border: 1px solid var(--gray-200); transition: box-shadow 0.2s;
@@ -185,6 +183,7 @@ tbody td {
 }
 tbody tr { cursor: pointer; transition: background 0.1s; }
 tbody tr:hover { background: var(--orange-light); }
+tbody tr.trip-sub:hover, tbody tr.trip-sub { background: transparent; }
 
 .mono { font-family: 'Space Mono', monospace; font-size: 12px; }
 .badge-status {
@@ -204,11 +203,15 @@ tbody tr:hover { background: var(--orange-light); }
 }
 .panel-overlay.open { display: block; opacity: 1; }
 .side-panel {
-  position: fixed; right: -520px; top: 0; bottom: 0; width: 520px;
-  background: var(--white); z-index: 201; transition: right 0.3s ease;
-  display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  position: fixed; top: 50%; left: 50%; z-index: 201;
+  width: min(760px, 92vw); max-height: 90vh;
+  transform: translate(-50%, -48%) scale(0.98); opacity: 0; pointer-events: none;
+  background: var(--white); border-radius: 18px;
+  display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0,0,0,0.25);
+  transition: opacity 0.18s ease, transform 0.18s ease;
 }
-.side-panel.open { right: 0; }
+.side-panel.open { transform: translate(-50%, -50%) scale(1); opacity: 1; pointer-events: auto; }
+.side-panel .panel-head { border-radius: 18px 18px 0 0; }
 .panel-head {
   display: flex; align-items: center; gap: 12px; padding: 20px 24px;
   border-bottom: 1px solid var(--gray-200); flex-shrink: 0;
@@ -222,6 +225,117 @@ tbody tr:hover { background: var(--orange-light); }
 .panel-close:hover { background: var(--gray-100); color: var(--dark); }
 .panel-body { flex: 1; overflow-y: auto; padding: 24px; }
 
+
+/* The flag is a bubble on the avatar, never a picture of its own. */
+.avatar-wrap { position: relative; display: inline-block; flex-shrink: 0; }
+.avatar-wrap .flag-dot {
+  position: absolute; bottom: -2px; left: -3px; width: 17px; height: 17px;
+  border-radius: 50%; border: 2px solid var(--white); background: var(--gray-100);
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; line-height: 1; padding: 0;
+}
+.avatar-wrap .flag-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.verify-head .avatar-wrap .flag-dot { width: 21px; height: 21px; font-size: 11px; }
+.profile-head .avatar-wrap .flag-dot { width: 21px; height: 21px; font-size: 11px; }
+
+.profile-head { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 1px solid var(--gray-200); margin-bottom: 22px; }
+.profile-head .avatar-wrap { position: relative; flex-shrink: 0; }
+.profile-head .flag-dot {
+  position: absolute; bottom: -2px; left: -4px; width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--white); background: var(--gray-100); overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 11px;
+}
+.profile-head .flag-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.profile-head .ph-name { font-size: 17px; font-weight: 700; line-height: 1.25; }
+.profile-head .ph-mail { font-size: 12px; color: var(--gray-400); font-family: 'Space Mono', monospace; margin-top: 3px; word-break: break-all; }
+.profile-head .ph-tags { margin-top: 7px; }
+.panel-icon { width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0; background: var(--orange-light);
+  display: flex; align-items: center; justify-content: center; }
+.panel-icon svg { width: 24px; height: 24px; color: var(--orange); }
+.panel-icon.green { background: var(--green-bg); } .panel-icon.green svg { color: var(--green); }
+.panel-icon.grey { background: var(--gray-100); } .panel-icon.grey svg { color: var(--gray-400); }
+.route-row { cursor: pointer; }
+.route-row td { font-size: 13.5px; }
+.route-row:hover td { background: var(--orange-light); }
+.route-name { display: flex; align-items: center; gap: 9px; font-weight: 700; }
+.route-caret { width: 14px; height: 14px; color: var(--gray-400); transition: transform 0.18s; flex-shrink: 0; }
+.route-row.open .route-caret { transform: rotate(90deg); color: var(--orange); }
+.route-row.open td { background: var(--gray-50); font-weight: 700; }
+.trip-sub td { background: var(--gray-50); padding: 0; }
+.trip-line { display: flex; align-items: center; gap: 12px; padding: 10px 20px 10px 44px; border-top: 1px solid var(--gray-100); cursor: pointer; font-size: 12.5px; }
+.trip-line:hover { background: var(--orange-light); }
+.trip-line .tl-date { font-family: 'Space Mono', monospace; color: var(--gray-400); width: 108px; flex-shrink: 0; }
+.trip-line .tl-driver { font-weight: 600; flex: 1; min-width: 0; }
+.trip-line .tl-seats { color: var(--gray-400); width: 82px; text-align: right; }
+.trip-line .tl-price { font-family: 'Space Mono', monospace; font-weight: 700; width: 74px; text-align: right; }
+.trip-line.paid { background: #FFF9F5; }
+.trip-line.paid:hover { background: var(--orange-light); }
+.trip-line .tl-pax { font-size: 11.5px; color: var(--orange); font-weight: 600; }
+.trip-line .tl-link { cursor: pointer; text-decoration: underline; text-decoration-color: var(--gray-300); text-underline-offset: 2px; }
+.trip-line .tl-link:hover { color: var(--orange); text-decoration-color: var(--orange); }
+.trip-line .tl-earned { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--orange); width: 74px; text-align: right; }
+.fill-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.fill-pct { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; }
+.fill-track { width: 88px; height: 6px; border-radius: 100px; background: var(--gray-100); overflow: hidden; }
+.fill-bar { height: 100%; border-radius: 100px; }
+.fill-sub { font-size: 10.5px; color: var(--gray-400); }
+.lead-tag { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 100px; }
+.lead-ok { background: #DCFCE7; color: #166534; }
+.lead-bad { background: #FEE2E2; color: #991B1B; }
+.lead-none { background: var(--gray-100); color: var(--gray-400); }
+.route-row.dead td { color: var(--gray-400); }
+.route-row.dead .route-name, .route-row.dead td:nth-child(2) { color: var(--dark); }
+.route-row .paid-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); margin-left: 7px; vertical-align: middle; }
+.sel-bar { display: none; align-items: center; gap: 12px; padding: 12px 20px; background: var(--orange-light);
+  border-bottom: 1px solid var(--orange-mid); flex-wrap: wrap; }
+.sel-bar.on { display: flex; }
+.sel-count { font-size: 13px; font-weight: 700; color: var(--orange); }
+.sel-bar .sel-btn { background: var(--white); border: 1.5px solid var(--orange-mid); border-radius: 9px;
+  padding: 7px 14px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--orange); cursor: pointer; }
+.sel-bar .sel-btn:hover { background: var(--orange); color: var(--white); border-color: var(--orange); }
+.sel-bar .sel-clear { margin-left: auto; font-size: 12.5px; color: var(--orange); cursor: pointer; text-decoration: underline; }
+.row-check { width: 16px; height: 16px; accent-color: #FF6B35; cursor: pointer; vertical-align: middle; }
+th.check-col, td.check-col { width: 38px; padding-right: 0; }
+.dup-card { border: 1px solid var(--gray-200); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.dup-head { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: var(--gray-50); border-bottom: 1px solid var(--gray-100); }
+.dup-reason { font-size: 12.5px; font-weight: 700; }
+.dup-value { font-size: 12px; color: var(--gray-400); font-family: 'Space Mono', monospace; }
+.dup-rows { display: flex; flex-direction: column; }
+.dup-row { display: flex; align-items: center; gap: 11px; padding: 10px 14px; cursor: pointer; border-top: 1px solid var(--gray-100); }
+.dup-row:first-child { border-top: none; }
+.dup-row:hover { background: var(--orange-light); }
+.dup-row .dr-name { font-size: 13px; font-weight: 700; }
+.dup-row .dr-sub { font-size: 11.5px; color: var(--gray-400); }
+.dup-row .dr-right { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--gray-400); white-space: nowrap; }
+.note-list { margin-bottom: 10px; }
+.note-item { background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.note-item .nt-text { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.note-item .nt-meta { font-size: 11px; color: var(--gray-400); margin-top: 6px; }
+.note-box { width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 10px 12px;
+  font-family: inherit; font-size: 13px; line-height: 1.5; outline: none; resize: vertical; min-height: 66px; }
+.note-box:focus { border-color: var(--orange); }
+.activity-cell { font-size: 12px; color: var(--gray-400); white-space: nowrap; }
+.activity-cell b { color: var(--dark, #1A1A1A); font-family: 'Space Mono', monospace; font-size: 12.5px; }
+.person-row { display: flex; align-items: center; gap: 12px; padding: 11px 13px; border-radius: 12px;
+  border: 1px solid var(--gray-200); cursor: pointer; transition: all 0.15s; }
+.person-row:hover { border-color: var(--orange-mid); background: var(--orange-light); }
+.person-row .pr-name { font-size: 13.5px; font-weight: 700; }
+.person-row .pr-mail { font-size: 11.5px; color: var(--gray-400); font-family: 'Space Mono', monospace;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.money-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 22px; }
+.money-box { background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: 12px; padding: 13px 15px; }
+.money-box .mb-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--gray-400); font-weight: 700; }
+.money-box .mb-value { font-family: 'Space Mono', monospace; font-size: 19px; font-weight: 700; margin-top: 5px; }
+.money-box.payable { background: #F0FDF4; border-color: #BBF7D0; }
+.money-box.payable .mb-value { color: #166534; }
+.money-box.blocked { background: #FEF2F2; border-color: #FECACA; }
+.money-box.blocked .mb-value { color: #991B1B; }
+.panel-cta { width: 100%; border: none; border-radius: 10px; padding: 12px; font-family: inherit;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+.panel-cta.pay { background: var(--orange); color: #fff; }
+.panel-cta.pay:hover { background: #E85A24; }
+.panel-cta.mail { background: var(--white); color: var(--gray-700, #2D2D2D); border: 1.5px solid var(--gray-200); }
+.panel-cta.mail:hover { border-color: var(--orange-mid); color: var(--orange); }
 .detail-section { margin-bottom: 24px; }
 .detail-section h4 {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px;
@@ -260,7 +374,6 @@ tbody tr:hover { background: var(--orange-light); }
 .empty { text-align: center; padding: 48px 24px; color: var(--gray-400); }
 
 /* Due-diligence view (dd custom claim): only the metrics page is reachable */
-body.dd-mode .nav-item[data-page="dd"] { display: none; }
 .dd-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
 @media (max-width: 900px) { .dd-grid { grid-template-columns: 1fr; } }
 .dd-note { font-size: 12px; color: var(--gray-400); margin: -8px 0 20px; }
@@ -284,13 +397,41 @@ body.dd-mode .dd-banner { display: flex; }
 
 /* Verification page */
 .verify-photo-wrap {
-  width: 100%; border-radius: 12px; overflow: hidden;
+  position: relative; width: 100%; height: 56vh; border-radius: 12px; overflow: hidden;
   background: var(--gray-100); border: 1px solid var(--gray-200);
-  margin-bottom: 16px; text-align: center; cursor: zoom-in;
+  margin-bottom: 16px; text-align: center; cursor: default;
+  display: flex; align-items: center; justify-content: center;
 }
 .verify-photo-wrap img {
-  width: 100%; max-height: 280px; object-fit: contain; display: block;
+  max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+  opacity: 0; transition: opacity 0.2s; transform-origin: center center;
+  user-select: none; -webkit-user-drag: none;
 }
+.verify-photo-wrap img.ready { opacity: 1; }
+.verify-photo-wrap .doc-loading {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 10px; color: var(--gray-400); font-size: 13px;
+}
+.verify-photo-wrap .doc-loading.gone { display: none; }
+
+/* Zoom happens inside the card: a new tab loses the two buttons and the name. */
+.verify-photo-wrap.zoomed { cursor: grab; }
+.verify-photo-wrap.zoomed:active { cursor: grabbing; }
+.verify-photo-wrap.zoomed img { max-width: none; max-height: none; }
+.doc-tools { display: flex; align-items: center; justify-content: center; gap: 8px; margin: -8px 0 16px; }
+.doc-tool {
+  width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--gray-200);
+  background: var(--white); color: var(--gray-400); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;
+  font-family: inherit; transition: all 0.15s;
+}
+.doc-tool:hover { border-color: var(--orange-mid); color: var(--orange); }
+.doc-tool.wide { width: auto; padding: 0 12px; font-size: 12px; font-weight: 600; }
+.doc-zoom-level { font-size: 12px; color: var(--gray-400); min-width: 42px; text-align: center; font-family: 'Space Mono', monospace; }
+.verify-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.verify-head .vh-name { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.verify-head .vh-sub { font-size: 12.5px; color: var(--gray-400); margin-top: 3px; }
+.verify-queue { font-size: 12px; color: var(--gray-400); text-align: center; margin: 10px 0 0; }
 .btn-approve {
   display: block; width: 100%; background: var(--green); color: white; border: none;
   border-radius: 10px; padding: 13px 24px; font-family: inherit; font-size: 14px;
@@ -315,6 +456,140 @@ body.dd-mode .dd-banner { display: flex; }
 
 /* Stats page */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.card-icon { width: 17px; height: 17px; color: var(--orange); flex-shrink: 0; }
+.table-header h3 { display: flex; align-items: center; gap: 9px; }
+.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 20px; }
+.quick-cell {
+  display: flex; flex-direction: column; justify-content: space-between;
+  background: var(--white); border: 1px solid var(--gray-200); border-radius: 18px;
+  padding: 20px 22px; min-height: 152px;
+  transition: transform 0.18s, box-shadow 0.18s;
+}
+.quick-cell:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.07); }
+.quick-cell.lead {
+  background: linear-gradient(135deg, #FF833D 0%, #FF6B35 100%);
+  border-color: transparent; box-shadow: 0 6px 18px rgba(255,107,53,0.25);
+}
+.cell-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.quick-cell .stat-value { font-family: 'Space Mono', monospace; font-size: 31px; font-weight: 700; line-height: 1.1; }
+.quick-cell.lead .stat-value { color: var(--white); }
+.cell-badge {
+  font-size: 11.5px; font-weight: 700; padding: 4px 9px; border-radius: 100px;
+  background: var(--gray-100); color: var(--gray-400); white-space: nowrap;
+}
+.cell-badge.up { background: #DCFCE7; color: #166534; }
+.cell-badge.down { background: #FEE2E2; color: #991B1B; }
+.quick-cell.lead .cell-badge { background: rgba(255,255,255,0.22); color: var(--white); }
+.quick-cell .stat-sub { font-size: 12px; color: var(--gray-400); margin-top: 7px; line-height: 1.45; }
+.quick-cell.lead .stat-sub { color: rgba(255,255,255,0.85); }
+.cell-bottom { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 16px; }
+.quick-cell .stat-label { font-size: 13.5px; font-weight: 600; color: var(--gray-400); }
+.quick-cell.lead .stat-label { color: rgba(255,255,255,0.92); }
+.cell-icon-circle {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--gray-50);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.cell-icon-circle svg { width: 17px; height: 17px; color: var(--gray-400); }
+.quick-cell.lead .cell-icon-circle { background: rgba(255,255,255,0.22); }
+.quick-cell.lead .cell-icon-circle svg { color: var(--white); }
+.avatar-stack { display: flex; flex-shrink: 0; }
+.avatar-stack .avatar { border: 2px solid rgba(255,255,255,0.92); margin-left: -10px; }
+.avatar-stack .avatar:first-child { margin-left: 0; }
+@media (max-width: 1000px) { .quick-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .quick-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .quick-cell { border-right: none; border-bottom: 1px solid var(--gray-100); } }
+.chart-box { padding: 18px 20px 20px; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 20px; border-top: 1px solid var(--gray-100); flex-wrap: wrap; }
+.pager-info { font-size: 12.5px; color: var(--gray-400); }
+.pager-btns { display: flex; align-items: center; gap: 6px; }
+.pager-btn {
+  min-width: 34px; height: 34px; padding: 0 10px; border-radius: 9px;
+  border: 1.5px solid var(--gray-200); background: var(--white);
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--gray-700, #2D2D2D);
+  cursor: pointer; transition: all 0.15s;
+}
+.pager-btn:hover:not(:disabled) { border-color: var(--orange-mid); color: var(--orange); background: var(--orange-light); }
+.pager-btn.current { background: var(--orange); border-color: var(--orange); color: var(--white); }
+.pager-btn:disabled { opacity: 0.4; cursor: default; }
+.pager-gap { color: var(--gray-400); padding: 0 2px; font-size: 13px; }
+.user-cell .avatar-wrap { position: relative; flex-shrink: 0; }
+.user-cell .flag-dot {
+  position: absolute; bottom: -2px; left: -3px; width: 16px; height: 16px;
+  border-radius: 50%; border: 2px solid var(--white); background: var(--gray-100);
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  font-size: 9px; line-height: 1;
+}
+.user-cell .flag-dot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.user-cell .user-lines { min-width: 0; }
+.th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+.th-sort:hover { color: var(--orange); }
+.th-sort .arrow { opacity: 0.45; font-size: 10px; margin-left: 3px; }
+.th-sort.on .arrow { opacity: 1; color: var(--orange); }
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--gray-100); }
+.filter-select {
+  border: 1.5px solid var(--gray-200); border-radius: 9px; padding: 7px 30px 7px 11px;
+  font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--gray-700, #2D2D2D);
+  background: var(--white) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8A8A' stroke-width='2.5' stroke-linecap='round'><path d='M6 9l6 6 6-6'/></svg>") no-repeat right 9px center/13px;
+  appearance: none; cursor: pointer; outline: none; transition: border-color 0.15s;
+}
+.filter-select:hover, .filter-select:focus { border-color: var(--orange-mid); }
+.filter-count { font-size: 12.5px; color: var(--gray-400); }
+.table-header .table-filter { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.search-label { font-size: 12px; font-weight: 700; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.6px; white-space: nowrap; }
+.search-wide {
+  width: 330px; border: 1.5px solid var(--gray-200); border-radius: 9px;
+  padding: 7px 12px; font-family: inherit; font-size: 12.5px; outline: none;
+  background: var(--gray-50); transition: border-color 0.15s, background 0.15s;
+}
+.search-wide:focus { border-color: var(--orange); background: var(--white); }
+.user-cell .user-name { font-weight: 700; display: flex; align-items: center; gap: 7px; }
+.user-cell .user-mail { font-size: 11.5px; color: var(--gray-400); font-family: 'Space Mono', monospace; margin-top: 2px; }
+.role-tag {
+  display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px;
+  border-radius: 100px; margin-right: 5px; white-space: nowrap;
+}
+.role-driver { background: #FFE8DC; color: #C2410C; }
+.role-passenger { background: #DBEAFE; color: #1E40AF; }
+.role-none { background: var(--gray-100); color: var(--gray-400); }
+.act-row { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--gray-100); }
+.act-row:last-child { border-bottom: none; }
+.act-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.act-text { flex: 1; min-width: 0; font-size: 13.5px; }
+.act-text .act-who { font-weight: 700; }
+.act-meta { font-size: 12px; color: var(--gray-400); white-space: nowrap; }
+.act-more { text-align: center; padding: 16px; background: var(--gray-50); }
+.todo-row { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--gray-100); }
+.todo-row:last-child { border-bottom: none; }
+.todo-count {
+  font-family: 'Space Mono', monospace; font-size: 17px; font-weight: 700;
+  min-width: 56px; text-align: center; padding: 9px 6px; border-radius: 10px;
+  background: var(--gray-100); color: var(--gray-700, #2D2D2D);
+}
+.todo-count.warn { background: #FEF3C7; color: #92400E; }
+.todo-count.alert { background: #FEE2E2; color: #991B1B; }
+.todo-count.done { background: #DCFCE7; color: #166534; }
+.todo-text { flex: 1; min-width: 0; }
+.todo-title { font-size: 14px; font-weight: 700; }
+.todo-sub { font-size: 12.5px; color: var(--gray-400); margin-top: 2px; }
+.todo-btn {
+  background: var(--white); border: 1.5px solid var(--gray-200); border-radius: 9px;
+  padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
+}
+.todo-btn:hover { border-color: var(--orange-mid); color: var(--orange); background: var(--orange-light); }
+.list-notice {
+  display: none; align-items: center; gap: 10px; padding: 11px 20px;
+  background: var(--orange-light); border-bottom: 1px solid var(--gray-200);
+  font-size: 13px; color: var(--orange);
+}
+.list-notice a { color: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.chart-box + .chart-box { border-left: 1px solid var(--gray-200); }
+.chart-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.chart-sub { font-size: 11.5px; color: var(--gray-400); margin-bottom: 14px; }
+.chart-holder { position: relative; height: 210px; }
+@media (max-width: 1100px) {
+  .chart-box + .chart-box { border-left: none; border-top: 1px solid var(--gray-200); }
+}
 .stats-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 24px; }
 
 .nat-row {
@@ -358,6 +633,19 @@ body.dd-mode .dd-banner { display: flex; }
 <body>
 
 <!-- LOGIN -->
+<!-- Repere de travail : visible uniquement quand la page est servie en local. Invisible sur admin.rooride.app. -->
+<div id="localBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#C2410C;color:#fff;
+     font:600 12px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.06em;text-align:center;padding:7px 10px;">
+  VERSION LOCALE &nbsp;·&nbsp; <span id="localBannerHost"></span> &nbsp;·&nbsp; rien n'est en ligne
+</div>
+<script>
+  if (['127.0.0.1','localhost'].includes(location.hostname)) {
+    document.getElementById('localBanner').style.display = 'block';
+    document.getElementById('localBannerHost').textContent = location.host;
+    document.documentElement.style.paddingTop = '26px';
+  }
+</script>
+
 <div id="loginScreen">
   <div class="login-card">
     <div class="logo-big">R</div>
@@ -376,9 +664,11 @@ body.dd-mode .dd-banner { display: flex; }
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-sm">R</div>
-      <span>Rooride</span>
-      <span class="badge">ADMIN</span>
+      <img src="logo.png" alt="Rooride" class="logo-sm">
+      <div class="logo-lines">
+        <div class="logo-name">Rooride Admin</div>
+        <div class="logo-user" id="sidebarUserEmail">—</div>
+      </div>
     </div>
 
     <div class="nav-section">Navigation</div>
@@ -391,66 +681,35 @@ body.dd-mode .dd-banner { display: flex; }
     <div class="nav-item" data-page="users" onclick="switchPage('users')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.85"/></svg>
       Users
-      <span class="count" id="navCountUsers">—</span>
     </div>
 
     <div class="nav-item" data-page="verification" onclick="switchPage('verification')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9S3 16.97 3 12 7.03 3 12 3s9 4.03 9 9z"/></svg>
       ID Verification
-      <span class="verif-pending-badge" id="navCountVerif" style="display:none">—</span>
     </div>
 
     <div class="nav-item" data-page="trips" onclick="switchPage('trips')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
       Trips
-      <span class="count" id="navCountTrips">—</span>
     </div>
 
-    <div class="nav-item" data-page="payments" onclick="switchPage('payments')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-      Payments
-      <span class="count" id="navCountPayments">—</span>
+    <div class="nav-item" data-page="money" onclick="switchPage('money')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 6.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Money
     </div>
 
-    <div class="nav-item" data-page="wallet" onclick="switchPage('wallet')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 010-4h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 100 4 2 2 0 000-4z"/></svg>
-      Wallet Transactions
-    </div>
 
-    <div class="nav-item" data-page="stats" onclick="switchPage('stats')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
-      Statistics
-    </div>
 
-    <div class="nav-item" data-page="dd" onclick="switchPage('dd')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
-      Due diligence
-    </div>
-
-    <div class="nav-section" style="margin-top:24px;">Tools</div>
-
-    <div class="nav-item" data-page="search" onclick="switchPage('search')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      Advanced search
-    </div>
 
     <div class="sidebar-bottom">
-      <div class="user-info" id="sidebarUserEmail">—</div>
+      <span id="privacyPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Privacy mode</span>
+      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Anonymised · synthetic identities</span>
       <button class="logout-btn" onclick="doLogout()">Log out</button>
     </div>
   </aside>
 
   <!-- Main -->
   <div class="main-area">
-    <div class="topbar">
-      <h1 id="topbarTitle">Overview</h1>
-      <span id="privacyPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Privacy mode</span>
-      <span id="ddPill" style="display:none; align-items:center; gap:6px; margin-left:14px; background:var(--gray-100); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:100px; padding:4px 12px; font-size:12px; font-weight:600;">🔒 Anonymised · synthetic identities</span>
-      <div class="global-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="globalSearchInput" placeholder="Quick search: email, Stripe ID, name..." onkeydown="if(event.key==='Enter') globalSearch()">
-      </div>
-    </div>
 
     <div class="content">
 
@@ -461,54 +720,215 @@ body.dd-mode .dd-banner { display: flex; }
 
       <!-- OVERVIEW -->
       <div class="page active" id="page-overview">
-        <div class="stat-row">
-          <div class="stat-card">
-            <div class="stat-label">Users</div>
-            <div class="stat-value" id="statUsers"><span class="spinner"></span></div>
+        <div class="table-card" style="margin-bottom:24px;">
+          <div class="table-header">
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Quick view</h3>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Trips</div>
-            <div class="stat-value" id="statTrips"><span class="spinner"></span></div>
+          <div class="quick-grid">
+            <div class="quick-cell lead">
+              <div>
+                <div class="cell-top">
+                  <div class="stat-value" id="statUsers"><span class="spinner"></span></div>
+                  <span class="cell-badge" id="statUsersBadge" style="display:none"></span>
+                </div>
+                
+              </div>
+              <div class="cell-bottom">
+                <div class="stat-label">Total users</div>
+                <div class="avatar-stack" id="statUsersAvatars"></div>
+              </div>
+            </div>
+            <div class="quick-cell">
+              <div>
+                <div class="cell-top">
+                  <div class="stat-value" id="statTrips"><span class="spinner"></span></div>
+                  <span class="cell-badge" id="statTripsBadge" style="display:none"></span>
+                </div>
+                <div class="stat-sub">Published by drivers</div>
+              </div>
+              <div class="cell-bottom">
+                <div class="stat-label">Total trips</div>
+                <div class="cell-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+              </div>
+            </div>
+            <div class="quick-cell">
+              <div>
+                <div class="cell-top">
+                  <div class="stat-value" id="statPayments"><span class="spinner"></span></div>
+                  <span class="cell-badge" id="statPaymentsBadge" style="display:none"></span>
+                </div>
+                <div class="stat-sub" id="statPaymentsSub">Trips completed</div>
+              </div>
+              <div class="cell-bottom">
+                <div class="stat-label">Paid bookings</div>
+                <div class="cell-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></div>
+              </div>
+            </div>
+            <div class="quick-cell">
+              <div>
+                <div class="cell-top">
+                  <div class="stat-value" id="statGross"><span class="spinner"></span></div>
+                  <span class="cell-badge" id="statGrossBadge" style="display:none"></span>
+                </div>
+                <div class="stat-sub" id="statGrossSub">Total money in circulation</div>
+              </div>
+              <div class="cell-bottom">
+                <div class="stat-label">Money on the platform</div>
+                <div class="cell-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 6.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              </div>
+            </div>
+            <div class="quick-cell">
+              <div>
+                <div class="cell-top">
+                  <div class="stat-value" id="statCommission"><span class="spinner"></span></div>
+                  <span class="cell-badge" id="statCommissionBadge" style="display:none"></span>
+                </div>
+                <div class="stat-sub">What the platform keeps once the driver is paid</div>
+              </div>
+              <div class="cell-bottom">
+                <div class="stat-label">Rooride earnings</div>
+                <div class="cell-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div>
+              </div>
+            </div>
+            <div class="quick-cell">
+              <div>
+                <div class="cell-top">
+                  <div class="stat-value" id="statWallet"><span class="spinner"></span></div>
+                  <span class="cell-badge" id="statWalletBadge" style="display:none"></span>
+                </div>
+                <div class="stat-sub">Earned, not paid out yet</div>
+              </div>
+              <div class="cell-bottom">
+                <div class="stat-label">To transfer to drivers</div>
+                <div class="cell-icon-circle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg></div>
+              </div>
+            </div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Payments</div>
-            <div class="stat-value" id="statPayments"><span class="spinner"></span></div>
+        </div>
+
+        <div class="table-card" style="margin-bottom:24px;">
+          <div class="table-header">
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>To action</h3>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Total wallet in circulation</div>
-            <div class="stat-value" id="statWallet"><span class="spinner"></span></div>
-            <div class="stat-sub">Sum of positive balances</div>
+          <div id="overviewTodo"><div class="loading" style="padding:20px;"><span class="spinner"></span> Loading...</div></div>
+        </div>
+
+        <div class="table-card" style="margin-bottom:24px;">
+          <div class="table-header">
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7"/><path d="M14 8h6v6"/></svg>Activity</h3>
+            <div class="table-filter" id="overviewPeriodBtns">
+              <button class="filter-btn" onclick="setOverviewPeriod('all', this)">All time</button>
+              <button class="filter-btn active" onclick="setOverviewPeriod('12m', this)">12 months</button>
+              <button class="filter-btn" onclick="setOverviewPeriod('6m', this)">6 months</button>
+              <button class="filter-btn" onclick="setOverviewPeriod('3m', this)">3 months</button>
+              <button class="filter-btn" onclick="setOverviewPeriod('1m', this)">1 month</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;">
+            <div class="chart-box">
+              <div class="chart-title">New sign-ups</div>
+              <div class="chart-sub" id="chartSignupsSub">&nbsp;</div>
+              <div class="chart-holder"><canvas id="chartSignups"></canvas></div>
+            </div>
+            <div class="chart-box">
+              <div class="chart-title">Trips published</div>
+              <div class="chart-sub" id="chartTripsSub">&nbsp;</div>
+              <div class="chart-holder"><canvas id="chartTrips"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="table-card">
+            <div class="table-header">
+              <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h5.5"/></svg>Top routes</h3>
+            </div>
+            <table>
+              <thead><tr>
+                <th>From</th><th>To</th>
+                <th style="text-align:right">Trips</th><th style="text-align:right">Avg price</th>
+              </tr></thead>
+              <tbody id="overviewRoutesBody"><tr><td colspan="4" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="table-card">
+            <div class="table-header">
+              <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>Top nationalities</h3>
+            </div>
+            <div id="overviewNatBody" style="padding:4px 20px 12px;"><div class="loading"><span class="spinner"></span> Loading...</div></div>
           </div>
         </div>
 
         <div class="table-card">
           <div class="table-header">
-            <h3>Latest payments</h3>
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Recent activity</h3>
           </div>
-          <table>
-            <thead><tr>
-              <th>Date</th><th>Passenger</th><th>Amount</th><th>Stripe ID</th><th>Status</th>
-            </tr></thead>
-            <tbody id="overviewPaymentsBody"><tr><td colspan="5" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
-          </table>
+          <div id="overviewActivity"><div class="loading" style="padding:20px;"><span class="spinner"></span> Loading...</div></div>
         </div>
+
+
       </div>
 
       <!-- USERS -->
       <div class="page" id="page-users">
         <div class="table-card">
+          <div class="list-notice" id="usersNotice">
+            <span id="usersNoticeText"></span>
+            <a onclick="clearUserFilter()">Show every user</a>
+          </div>
           <div class="table-header">
-            <h3>All users</h3>
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>All users</h3>
             <div class="table-filter">
-              <input type="text" id="usersSearchInput" placeholder="Filter by email or name..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:240px;" oninput="filterUsersTable()">
+              <input type="text" id="usersSearchInput" placeholder="Email, name, phone, account ID or Stripe ID" class="search-wide" oninput="filterUsersTable()">
             </div>
+          </div>
+          <div class="sel-bar" id="usersSelBar">
+            <span class="sel-count" id="usersSelCount"></span>
+            <button class="sel-btn" onclick="emailSelection()">Write to them</button>
+            <button class="sel-btn" onclick="copySelectionEmails()">Copy addresses</button>
+            <button class="sel-btn" disabled style="opacity:.45;cursor:default;" title="Banning needs a server function: the flag lives in Firebase Authentication, not in the database">Ban</button>
+            <button class="sel-btn" disabled style="opacity:.45;cursor:default;" title="Deleting needs a server function: removing the record here would not remove the login">Delete</button>
+            <span class="sel-clear" onclick="clearSelection()">Clear selection</span>
+          </div>
+          <div class="filter-bar">
+            <select class="filter-select" onchange="setUserFilter('role', this.value)">
+              <option value="all">Every role</option>
+              <option value="driver">Drivers</option>
+              <option value="passenger">Passengers</option>
+              <option value="both">Both roles</option>
+              <option value="none">No role yet</option>
+            </select>
+            <select class="filter-select" onchange="setUserFilter('banned', this.value)">
+              <option value="all">Banned or not</option>
+              <option value="yes">Banned only</option>
+              <option value="no">Not banned</option>
+            </select>
+            <select class="filter-select" onchange="setUserFilter('id', this.value)">
+              <option value="all">Any identity</option>
+              <option value="verified">Verified</option>
+              <option value="pending">Pending review</option>
+              <option value="none">No document</option>
+            </select>
+            <select class="filter-select" onchange="setUserFilter('bank', this.value)">
+              <option value="all">Any bank status</option>
+              <option value="yes">Bank details provided</option>
+              <option value="no">Bank details missing</option>
+            </select>
+            <button class="filter-btn" onclick="runDuplicateCheck()" style="margin-left:auto;">Check for duplicates</button>
+            <button class="filter-btn" id="btnExportUsers" onclick="exportUsersCsv()">Export</button>
+            <span class="filter-count" id="usersFilterCount"></span>
           </div>
           <table>
             <thead><tr>
-              <th>User</th><th>Email</th><th>Wallet</th><th>Verified</th><th>Bank</th><th>Joined</th>
+              <th class="check-col"><input type="checkbox" class="row-check" id="usersCheckAll" onclick="toggleAllOnPage(this.checked)"></th>
+              <th>User</th><th>Role</th><th class="th-sort" id="thActivity" onclick="sortUsersBy('activity')">Activity<span class="arrow">▲▼</span></th>
+              <th class="th-sort" id="thWallet" onclick="sortUsersBy('wallet')">Wallet<span class="arrow">▲▼</span></th>
+              <th>Verified</th><th>Bank</th>
+              <th class="th-sort" id="thJoined" onclick="sortUsersBy('joined')">Joined<span class="arrow">▲▼</span></th>
             </tr></thead>
-            <tbody id="usersTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
+            <tbody id="usersTableBody"><tr><td colspan="8" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
+          <div class="pager" id="usersPager"></div>
         </div>
       </div>
 
@@ -516,121 +936,95 @@ body.dd-mode .dd-banner { display: flex; }
       <div class="page" id="page-trips">
         <div class="table-card">
           <div class="table-header">
-            <h3>All trips</h3>
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H14a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8h5.5"/></svg>Routes</h3>
             <div class="table-filter">
-              <button class="filter-btn active" onclick="filterTrips('all', this)">All</button>
-              <button class="filter-btn" onclick="filterTrips('noPassengers', this)">No passengers</button>
-              <button class="filter-btn" onclick="filterTrips('withPassengers', this)">With passengers</button>
+              <input type="text" id="tripsSearchInput" placeholder="A city, a driver" class="search-wide" style="width:250px" oninput="routesPage = 1; renderRoutes()">
             </div>
+          </div>
+          <div class="filter-bar">
+            <select class="filter-select" onchange="TRIP_FILTER = this.value; routesPage = 1; renderRoutes();">
+              <option value="all">Every trip</option>
+              <option value="booked">Booked at least once</option>
+              <option value="empty">Nobody booked</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <select class="filter-select" onchange="TRIP_PERIOD = this.value; routesPage = 1; renderRoutes();">
+              <option value="all">Since launch</option>
+              <option value="12m">Last 12 months</option>
+              <option value="6m">Last 6 months</option>
+              <option value="3m">Last 3 months</option>
+              <option value="1m">Last month</option>
+            </select>
+            <select class="filter-select" onchange="ROUTE_FILTER = this.value; routesPage = 1; renderRoutes();">
+              <option value="all">Every route</option>
+              <option value="converts">Routes that convert</option>
+              <option value="dead">Routes with no booking</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--gray-400);cursor:pointer;">
+              <input type="checkbox" class="row-check" onchange="TRIP_BOTHWAYS = this.checked; routesPage = 1; renderRoutes();">
+              Group both directions
+            </label>
+            <span class="filter-count" id="routesCount"></span>
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Route</th><th>Driver</th><th>Price/seat</th><th>Seats</th><th>Status</th>
+              <th>From</th><th>To</th>
+              <th class="th-sort" style="text-align:right" id="thRtTrips" onclick="sortRoutesBy('trips')">Trips<span class="arrow">▲▼</span></th>
+              <th class="th-sort" style="text-align:right" id="thRtSeats" onclick="sortRoutesBy('offered')">Seats offered<span class="arrow">▲▼</span></th>
+              <th class="th-sort" style="text-align:right" id="thRtFill" onclick="sortRoutesBy('fill')">Fill rate<span class="arrow">▲▼</span></th>
+              <th class="th-sort" style="text-align:right" id="thRtPrice" onclick="sortRoutesBy('price')">Avg price<span class="arrow">▲▼</span></th>
+              <th class="th-sort" style="text-align:right" id="thRtEarned" onclick="sortRoutesBy('earned')">Earned<span class="arrow">▲▼</span></th>
             </tr></thead>
-            <tbody id="tripsTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
+            <tbody id="tripsTableBody"><tr><td colspan="7" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
+          <div class="pager" id="routesPager"></div>
         </div>
       </div>
 
       <!-- PAYMENTS -->
-      <div class="page" id="page-payments">
-        <div class="table-card">
+      <div class="page" id="page-money">
+        <div class="table-card" style="margin-bottom:24px;">
           <div class="table-header">
-            <h3>All payments</h3>
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 6.5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Every booking, and where its money went</h3>
             <div class="table-filter">
-              <input type="text" id="paymentsSearchInput" placeholder="Search Stripe ID..." style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 12px;font-family:inherit;font-size:12px;outline:none;width:220px;" oninput="filterPaymentsTable()">
+              <input type="text" id="paymentsSearchInput" placeholder="A passenger, a driver, a Stripe identifier" class="search-wide" style="width:310px" oninput="filterPaymentsTable()">
             </div>
           </div>
           <table>
             <thead><tr>
-              <th>Date</th><th>Passenger</th><th>Paid</th><th>Trip price</th><th>Commission</th><th>Driver share</th><th>Status</th>
+              <th>Passenger</th><th>Driver</th>
+              <th style="text-align:right">Paid</th>
+              <th style="text-align:right">Rooride</th>
+              <th style="text-align:right">Driver share</th>
+              <th style="text-align:right">In the wallet now</th>
+              <th>Status</th>
             </tr></thead>
             <tbody id="paymentsTableBody"><tr><td colspan="7" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
-      </div>
 
-      <!-- WALLET -->
-      <div class="page" id="page-wallet">
-        <div class="table-card">
-          <div class="table-header">
-            <h3>Wallet Transactions</h3>
-          </div>
-          <table>
-            <thead><tr>
-              <th>Date</th><th>User</th><th>Type</th><th>Amount</th><th>Description</th><th>Status</th>
-            </tr></thead>
-            <tbody id="walletTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
-          </table>
-        </div>
       </div>
 
       <!-- VERIFICATION -->
       <div class="page" id="page-verification">
-        <div class="stat-row" style="margin-bottom:24px;">
-          <div class="stat-card" style="border-left:4px solid var(--yellow);">
-            <div class="stat-label">Pending review</div>
-            <div class="stat-value" id="verifStatPending"><span class="spinner"></span></div>
-            <div class="stat-sub">Document submitted, not verified</div>
-          </div>
-          <div class="stat-card" style="border-left:4px solid var(--green);">
-            <div class="stat-label">Verified</div>
-            <div class="stat-value" id="verifStatVerified"><span class="spinner"></span></div>
-            <div class="stat-sub">isVerified = true</div>
-          </div>
-          <div class="stat-card" style="border-left:4px solid var(--gray-300);">
-            <div class="stat-label">No document submitted</div>
-            <div class="stat-value" id="verifStatNone"><span class="spinner"></span></div>
-            <div class="stat-sub">No document yet</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Verification rate</div>
-            <div class="stat-value" id="verifStatRate"><span class="spinner"></span></div>
-          </div>
-        </div>
-
         <div class="table-card">
           <div class="table-header">
-            <h3>Cases to review</h3>
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2.2"/><path d="M5.5 17c.7-1.8 2-2.7 3.5-2.7s2.8.9 3.5 2.7"/><path d="M15 9.5h4"/><path d="M15 13h4"/></svg>Cases to review</h3>
             <div class="table-filter">
-              <button class="filter-btn active" onclick="filterVerif('pending', this)">Pending</button>
-              <button class="filter-btn" onclick="filterVerif('verified', this)">Verified</button>
               <button class="filter-btn" onclick="filterVerif('all', this)">All</button>
+              <button class="filter-btn" onclick="filterVerif('verified', this)">Verified</button>
+              <button class="filter-btn active" onclick="filterVerif('pending', this)">Pending</button>
             </div>
           </div>
           <table>
             <thead><tr>
-              <th>User</th><th>Email</th><th>ID document</th><th>Joined</th><th>Status</th><th>Action</th>
+              <th>User</th><th>Joined</th><th>Status</th><th style="text-align:right">Action</th>
             </tr></thead>
-            <tbody id="verifTableBody"><tr><td colspan="6" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
+            <tbody id="verifTableBody"><tr><td colspan="4" class="loading"><span class="spinner"></span> Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
 
-      <!-- STATS -->
-      <div class="page" id="page-stats">
-        <div id="statsContent"><div class="loading"><span class="spinner"></span> Loading statistics...</div></div>
-      </div>
-
-      <!-- DUE DILIGENCE — aggregated metrics only, see scripts/07_publish_dd_metrics.js -->
-      <div class="page" id="page-dd">
-        <div id="ddContent"><div class="loading"><span class="spinner"></span> Loading metrics...</div></div>
-      </div>
-
-      <!-- SEARCH -->
-      <div class="page" id="page-search">
-        <div class="table-card" style="padding:32px;">
-          <h3 style="margin-bottom:8px;">🔍 Advanced search</h3>
-          <p style="color:var(--gray-400);font-size:13px;margin-bottom:20px;">
-            Search an email, a Stripe Payment ID, a username... to trace the full history.
-          </p>
-          <div style="display:flex;gap:10px;">
-            <input type="text" id="advancedSearchInput" placeholder="e.g. pi_3R2abc..., john@email.com, John Doe" style="flex:1;border:2px solid var(--gray-200);border-radius:10px;padding:14px 16px;font-family:inherit;font-size:14px;outline:none;" onfocus="this.style.borderColor='var(--orange)'" onblur="this.style.borderColor='var(--gray-200)'" onkeydown="if(event.key==='Enter') advancedSearch()">
-            <button onclick="advancedSearch()" style="background:var(--orange);color:white;border:none;border-radius:10px;padding:14px 24px;font-family:inherit;font-weight:600;cursor:pointer;font-size:14px;">Search</button>
-          </div>
-          <div id="searchResults" style="margin-top:24px;"></div>
-        </div>
-      </div>
 
     </div>
   </div>
@@ -658,6 +1052,10 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+// The SDK opens a WebChannel first and waits about fifteen seconds before falling back
+// when something blocks it, which held every query on this page. Auto-detection is
+// asked for explicitly so the fallback happens on the first attempt.
+try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) { console.warn('firestore settings', e); }
 const auth = firebase.auth();
 
 // ── Cache ──
@@ -734,7 +1132,9 @@ const AVATAR_COLORS = ['#F97316', '#3B82F6', '#22C55E', '#A855F7', '#EF4444', '#
 function displayName(u) {
   if (!u) return '—';
   if (PRIVACY_MODE) return pseudoName(u.id);
-  return u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || '—';
+  // Some names arrive with their spaces encoded as plus signs, as in "Maya+Rivera".
+  const clean = v => String(v || '').replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+  return clean(u.display_name) || clean(`${u.firstName || ''} ${u.lastName || ''}`) || u.email || '—';
 }
 function avatarHtml(u, px) {
   const size = px || 28;
@@ -857,99 +1257,6 @@ auth.onAuthStateChanged(user => {
 });
 
 // ── Due diligence metrics ──
-// Aggregated, non-personal figures published by scripts/07_publish_dd_metrics.js
-// into dd_metrics/latest. Staff-only tab (hidden for dd accounts, which use the
-// anonymised full dashboard instead — see showDDApp).
-async function loadDDMetrics() {
-  const el = document.getElementById('ddContent');
-  try {
-    const snap = await db.collection('dd_metrics').doc('latest').get();
-    if (!snap.exists) { el.innerHTML = '<div class="empty">No metrics published yet.</div>'; return; }
-    el.innerHTML = renderDDMetrics(snap.data());
-  } catch (e) {
-    el.innerHTML = `<div class="empty">Could not load metrics: ${e.message}</div>`;
-  }
-}
-
-function renderDDMetrics(m) {
-  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const num = n => (n == null ? '—' : Number(n).toLocaleString('en-AU'));
-  const aud = n => (n == null ? '—' : 'A$' + Number(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-  const day = iso => (iso ? new Date(iso).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
-  const pct = v => (v == null ? '—' : v + '%');
-
-  const u = m.users || {}, t = m.trips || {}, pay = m.payments || {}, e = m.engagement || {};
-  const p = pay.payments || {}, c = pay.commissionRecords || {}, w = pay.walletTransactions || {}, r = pay.revenueModel || {};
-  const part = e.participation || {}, chat = e.chat || {}, rev = e.reviews || {};
-  const inv = (m.inventory || {}).counts || {};
-
-  const stat = (label, value, sub, accent) => `
-    <div class="stat-card${accent ? ' stat-card-accent' : ''}">
-      <div class="stat-label">${esc(label)}</div>
-      <div class="stat-value">${value}</div>
-      ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
-    </div>`;
-  const bars = (rows, labelOf, valueOf) => {
-    if (!rows.length) return '<div class="empty">No data</div>';
-    const max = Math.max(1, ...rows.map(valueOf));
-    return rows.map(x => `
-      <div style="display:flex;align-items:center;gap:12px;padding:5px 0;">
-        <span class="mono" style="width:110px;font-size:12px;color:var(--gray-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(labelOf(x))}</span>
-        <div class="nat-bar-wrap"><div class="nat-bar" style="width:${(valueOf(x) / max * 100).toFixed(1)}%"></div></div>
-        <span style="width:56px;text-align:right;font-size:13px;font-weight:600;">${num(valueOf(x))}</span>
-      </div>`).join('');
-  };
-  const card = (title, body) => `<div class="table-card"><div class="table-header"><h3>${esc(title)}</h3></div><div style="padding:8px 20px 14px;">${body}</div></div>`;
-  const tableCard = (title, head, rows) => `<div class="table-card"><div class="table-header"><h3>${esc(title)}</h3></div>
-    <table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
-    <tbody>${rows.length ? rows.map(row => `<tr>${row.map(v => `<td>${v}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${head.length}" class="empty">No data</td></tr>`}</tbody></table></div>`;
-  const dist = obj => Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
-
-  return `
-    <p class="dd-note">Aggregated figures only — no personal data. Extracted ${day(m.extractedAt)} · published ${day(m.publishedAt)}.</p>
-    <div class="stat-row">
-      ${stat('Registered users', num(u.total), `${num(u.verified)} ID-verified (${pct(u.verificationRatePct)})`, true)}
-      ${stat('Users with ≥1 trip or booking', num(part.cohortAnyTrip), `${pct(part.cohortPctOfUsers)} of registered · ${num(part.activeDrivers)} drivers · ${num(part.activePassengers)} passengers`)}
-      ${stat('Trips published', num(t.total), `${num(t.withPassenger)} with at least one passenger (${pct(t.withPassengerPct)})`)}
-      ${stat('Paid bookings', num(p.successCount), `${num(p.distinctPassengers)} distinct passengers`)}
-    </div>
-    <div class="stat-row">
-      ${stat('Gross booking value', aud(p.successGMV_AUD), `avg basket ${aud(p.avgBasketAUD)}`)}
-      ${stat('Rooride revenue (est.)', aud(r.estTotalRoorideRevenueAUD), `${aud(r.recordedCommissionAUD)} commission + ${aud(r.estBookingFeeRevenueAUD_viaPayments)} booking fees`)}
-      ${stat('Commission rate', pct(c.avgCommissionPct), `on ${aud(c.sumTripTotalPriceAUD)} of trip value · booking fee ${aud(r.bookingFeePerSeatAUD)}/seat`)}
-      ${stat('Wallet in circulation', aud((u.wallet || {}).sumPositiveAUD), `${num((u.wallet || {}).usersWithPositiveBalance)} users with a positive balance`)}
-    </div>
-    <div class="dd-grid">
-      ${card('New sign-ups per month', bars((u.acquisition || {}).byMonth || [], x => x.month, x => x.new))}
-      ${card('Trips published per month', bars(t.monthlyByStartTime || [], x => x.month, x => x.trips))}
-    </div>
-    <div class="dd-grid">
-      ${tableCard('Top routes', ['Route', 'Trips'], (t.topRoutes || []).map(x => [esc(x.route), num(x.count)]))}
-      ${card('Nationalities (top 10)', bars((u.nationalities || {}).top10 || [], x => x.country, x => x.count))}
-    </div>
-    <div class="dd-grid">
-      ${tableCard('Paid bookings per month', ['Month', 'Gross booking value'], (p.monthlyGMV || []).map(x => [esc(x.month), aud(x.gmv)]))}
-      ${card('Trip status', bars(dist(t.statusDistribution), x => x[0], x => x[1]))}
-    </div>
-    <div class="dd-grid">
-      ${tableCard('Engagement', ['Metric', 'Value'], [
-        ['Chat conversations', num(chat.conversations_chatsCollection)],
-        ['Chat messages', num(chat.messages)],
-        ['Avg messages per conversation', num(chat.avgMessagesPerConversation)],
-        ['Reviews', rev.count ? num(rev.count) : '0 — review feature unused'],
-        ['Users with bank details', `${num(u.bankComplete)} (${pct(u.bankCompletePctOfTotal)})`],
-      ])}
-      ${tableCard('Wallet & commissions', ['Metric', 'Value'], [
-        ['Commission records', `${num(c.count)} (${num(c.nonZeroCount)} non-zero)`],
-        ['Total commission', aud(c.totalCommissionAUD)],
-        ...Object.entries(w.byType || {}).map(([k, v]) => [`Wallet · ${esc(k)}`, `${num(v.n)} · ${aud(v.sumAUD)}`]),
-        ['Seats offered / reserved', `${num((t.seats || {}).sumTotalSeats)} / ${num((t.seats || {}).sumReservedSeats)} (${pct((t.seats || {}).globalFillRatePct)} fill)`],
-        ['Price per seat (median / avg)', `${aud((t.pricePerSeat || {}).median)} / ${aud((t.pricePerSeat || {}).avg)}`],
-      ])}
-    </div>
-    ${tableCard('Firestore collections', ['Collection', 'Documents'], Object.entries(inv).sort((a, b) => (b[1].count || 0) - (a[1].count || 0)).map(([k, v]) => [esc(k), num(v.count)]))}
-  `;
-}
 
 // ── Navigation ──
 function switchPage(page) {
@@ -960,13 +1267,11 @@ function switchPage(page) {
 
   const titles = {
     overview: 'Overview', users: 'Users', trips: 'Trips',
-    payments: 'Payments', wallet: 'Wallet Transactions', search: 'Advanced search',
-    stats: 'Statistics', verification: 'ID Verification', dd: 'Due diligence'
+    money: 'Money', verification: 'ID Verification'
   };
-  document.getElementById('topbarTitle').textContent = titles[page] || page;
-  if (page === 'stats') renderStatsPage();
+  const t = document.getElementById('topbarTitle');
+  if (t) t.textContent = titles[page] || page;
   if (page === 'verification') renderVerificationPage();
-  if (page === 'dd') loadDDMetrics();
 }
 
 // ── Load Data ──
@@ -978,21 +1283,53 @@ function resetState() {
   allUsers = []; allTrips = []; allPayments = []; allWalletTx = [];
   allCommissions = []; allNationalities = [];
   usersMap = {}; natMap = {}; bannedMap = {};
-  ['usersTableBody', 'tripsTableBody', 'paymentsTableBody', 'walletTableBody', 'verifTableBody', 'overviewPaymentsBody']
+  ['usersTableBody', 'tripsTableBody', 'paymentsTableBody', 'walletTableBody', 'verifTableBody', 'overviewRoutesBody']
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<tr><td colspan="8" class="loading"><span class="spinner"></span> Loading...</td></tr>'; });
-  ['statUsers', 'statTrips', 'statPayments', 'statWallet', 'navCountUsers', 'navCountTrips', 'navCountPayments']
+  Object.keys(overviewCharts).forEach(k => { overviewCharts[k].destroy(); delete overviewCharts[k]; });
+  const natBody = document.getElementById('overviewNatBody');
+  if (natBody) natBody.innerHTML = '<div class="loading"><span class="spinner"></span> Loading...</div>';
+  ['statUsers', 'statTrips', 'statPayments', 'statGross', 'statCommission', 'statWallet']
     .forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = '<span class="spinner"></span>'; });
   const panel = document.getElementById('sidePanel'); if (panel) panel.classList.remove('open');
 }
 
 async function loadAllData() {
-  await loadBanned();
-  await loadUsers();
-  loadTrips();
-  loadPayments();
-  loadWalletTransactions();
-  loadCommissions();
-  loadNationalities();
+  // Every collection is fetched at the same time. Loading them one after the other
+  // made the whole page wait on the 5,000-odd user documents before anything else
+  // even started.
+  const LOCAL = ['127.0.0.1','localhost'].includes(location.hostname);
+  const t0 = performance.now();
+  const timings = [];
+  const timed = (name, p) => p.then(v => { timings.push(name + ' ' + Math.round(performance.now() - t0) + 'ms'); return v; });
+  const jobs = [timed('banned', loadBanned()), timed('users', loadUsers()), timed('trips', loadTrips()),
+                timed('payments', loadPayments()), timed('wallet', loadWalletTransactions()),
+                timed('commissions', loadCommissions()), timed('nationalities', loadNationalities())];
+  const results = await Promise.allSettled(jobs);
+  if (LOCAL) {
+    const host = document.getElementById('localBannerHost');
+    if (host) host.textContent = 'total ' + Math.round(performance.now() - t0) + 'ms · ' + timings.join(' · ');
+  }
+
+  // Names are read from usersMap, which is only complete once loadUsers has finished,
+  // so the tables that show a name are drawn again here, from data already in memory.
+  renderRoutes();
+  renderPaymentsTable(allPayments);
+  renderWalletTable(allWalletTx);
+  renderOverviewActivity();
+  renderOverviewTops();
+  renderOverviewTodo();
+  renderOverviewActivityFeed();
+  renderVerificationPage();
+  DRIVER_IDS = null; PASSENGER_IDS = null; LAST_ACTIVITY = null;
+  usersBase = allUsers;
+  lockExportForDd();
+  applyUserView();
+  renderQuickMoney();
+  renderQuickBadges();
+  renderUserAvatars();
+
+  const failed = results.find(r => r.status === 'rejected');
+  if (failed) throw failed.reason;
 }
 
 // A denied read used to reject silently and leave the page as it was. Say so instead.
@@ -1031,7 +1368,6 @@ async function loadUsers() {
   const snap = await db.collection(SRC.users).get();
   allUsers = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
   allUsers.forEach(u => usersMap[u.id] = u);
-  document.getElementById('navCountUsers').textContent = allUsers.length;
   document.getElementById('statUsers').textContent = allUsers.length;
 
   // Total wallet
@@ -1043,32 +1379,19 @@ async function loadUsers() {
   updateVerifBadge();
 }
 
-function updateVerifBadge() {
-  const pending = allUsers.filter(u => u.idPhoto && !u.isVerified);
-  const badge = document.getElementById('navCountVerif');
-  if (pending.length > 0) {
-    badge.textContent = pending.length;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
-}
+function updateVerifBadge() { /* the sidebar no longer carries counters */ }
 
 async function loadTrips() {
   const snap = await db.collection(SRC.trips).orderBy('startTime', 'desc').get();
   allTrips = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
-  document.getElementById('navCountTrips').textContent = allTrips.length;
   document.getElementById('statTrips').textContent = allTrips.length;
-  renderTripsTable(allTrips);
+  renderRoutes();
 }
 
 async function loadPayments() {
   const snap = await db.collection(SRC.payments).orderBy('paymentDate', 'desc').get();
   allPayments = snap.docs.map(d => escDeep({ id: d.id, ...d.data() }));
-  document.getElementById('navCountPayments').textContent = allPayments.length;
-  document.getElementById('statPayments').textContent = allPayments.length;
   renderPaymentsTable(allPayments);
-  renderOverviewPayments(allPayments.slice(0, 10));
 }
 
 async function loadWalletTransactions() {
@@ -1109,7 +1432,7 @@ function getUserName(ref) {
   if (PRIVACY_MODE) return pseudoName(uid);
   const u = usersMap[uid];
   if (!u) return uid?.substring(0, 8) + '...';
-  return u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || uid;
+  return displayName(u);
 }
 
 function getUserEmail(ref) {
@@ -1137,27 +1460,247 @@ function statusBadge(status) {
 }
 
 // ── Render Tables ──
-function renderUsersTable(users) {
+// Tables hold thousands of rows, of which a screen shows about twenty. Building them
+// all at once froze the page, so a table draws a first slice and grows on demand.
+const ROWS_STEP = 100;
+const rowsShown = {};
+const rowsRedraw = {};
+
+function renderRows(key, tbodyId, items, cols, rowHtml, emptyText, keepCount) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  if (!keepCount) rowsShown[key] = ROWS_STEP;
+  rowsRedraw[key] = () => renderRows(key, tbodyId, items, cols, rowHtml, emptyText, true);
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty"><p>${emptyText}</p></td></tr>`;
+    return;
+  }
+  const shown = Math.min(rowsShown[key], items.length);
+  let html = items.slice(0, shown).map(rowHtml).join('');
+  if (items.length > shown) {
+    const next = Math.min(ROWS_STEP, items.length - shown);
+    html += `<tr><td colspan="${cols}" style="text-align:center;padding:16px;background:var(--gray-50);">
+      <button onclick="event.stopPropagation();showMoreRows('${key}')"
+        style="background:var(--orange);color:#fff;border:none;border-radius:8px;padding:9px 18px;
+               font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;">Show ${next} more</button>
+      <div style="margin-top:7px;font-size:12px;color:var(--gray-400);">${shown} of ${items.length}</div>
+    </td></tr>`;
+  }
+  tbody.innerHTML = html;
+}
+
+function showMoreRows(key) {
+  rowsShown[key] = (rowsShown[key] || ROWS_STEP) + ROWS_STEP;
+  if (rowsRedraw[key]) rowsRedraw[key]();
+}
+
+// Twenty rows a page. Five thousand accounts in one table is both slow to draw and
+// impossible to work through.
+const USERS_PER_PAGE = 20;
+let usersPage = 1;
+let usersList = [];
+
+// A role is not stored on the account: it is what the person has actually done.
+function userRoles(u) {
+  if (!DRIVER_IDS) buildRoleIndex();
+  const roles = [];
+  if (DRIVER_IDS.has(u.id)) roles.push('driver');
+  if (PASSENGER_IDS.has(u.id)) roles.push('passenger');
+  return roles;
+}
+let DRIVER_IDS = null, PASSENGER_IDS = null, TRIP_COUNT = {}, BOOKING_COUNT = {};
+function buildRoleIndex() {
+  DRIVER_IDS = new Set(); PASSENGER_IDS = new Set(); TRIP_COUNT = {}; BOOKING_COUNT = {};
+  allTrips.forEach(t => {
+    const id = getRefId(t.driverID) || t.driverID;
+    if (!id) return;
+    DRIVER_IDS.add(id); TRIP_COUNT[id] = (TRIP_COUNT[id] || 0) + 1;
+  });
+  allPayments.forEach(p => {
+    const id = getRefId(p.passengerId) || p.passengerId;
+    if (!id) return;
+    PASSENGER_IDS.add(id); BOOKING_COUNT[id] = (BOOKING_COUNT[id] || 0) + 1;
+  });
+}
+const countTrips = id => TRIP_COUNT[id] || 0;
+const countBookings = id => BOOKING_COUNT[id] || 0;
+
+// Users have no "last seen" field. The closest honest answer is the most recent thing
+// they did: published a trip, paid for a seat, or had their wallet move.
+let LAST_ACTIVITY = null;
+function buildActivityIndex() {
+  LAST_ACTIVITY = {};
+  const mark = (uid, d) => {
+    const id = getRefId(uid) || uid;
+    if (!id || !d) return;
+    if (!LAST_ACTIVITY[id] || d > LAST_ACTIVITY[id]) LAST_ACTIVITY[id] = d;
+  };
+  allTrips.forEach(t => mark(t.driverID, toDate(t.created_time) || toDate(t.startTime)));
+  allPayments.forEach(p => mark(p.passengerId, toDate(p.paymentDate)));
+  allWalletTx.forEach(t => mark(t.userId, toDate(t.transactionDate)));
+}
+
+const USER_FILTER = { id: 'all', bank: 'all', role: 'all', banned: 'all' };
+// The page opens on what needs doing: the fullest wallets first.
+let usersSort = { key: 'wallet', dir: 'desc' };
+
+function idState(u) {
+  if (u.isVerified) return 'verified';
+  return u.idPhoto ? 'pending' : 'none';
+}
+const hasBank = u => !!(u.bankDetails && u.bankDetails.isBankDetailsComplete);
+
+function setUserFilter(group, value) {
+  USER_FILTER[group] = value;
+  applyUserView();
+}
+
+function sortUsersBy(key) {
+  if (usersSort.key === key) usersSort.dir = usersSort.dir === 'asc' ? 'desc' : 'asc';
+  else usersSort = { key, dir: key === 'wallet' ? 'desc' : 'desc' };
+  applyUserView();
+}
+
+// One place decides what the table shows: the search box, the two filters and the sort.
+function applyUserView() {
+  let list = usersBase.slice();
+  if (USER_FILTER.id !== 'all') list = list.filter(u => idState(u) === USER_FILTER.id);
+  if (USER_FILTER.bank !== 'all') list = list.filter(u => hasBank(u) === (USER_FILTER.bank === 'yes'));
+  if (USER_FILTER.banned !== 'all') list = list.filter(u => isBanned(u.id) === (USER_FILTER.banned === 'yes'));
+  if (USER_FILTER.role !== 'all') {
+    buildRoleIndex();
+    list = list.filter(u => {
+      const d = DRIVER_IDS.has(u.id), p = PASSENGER_IDS.has(u.id);
+      return USER_FILTER.role === 'driver' ? d
+           : USER_FILTER.role === 'passenger' ? p
+           : USER_FILTER.role === 'both' ? (d && p)
+           : !d && !p;
+    });
+  }
+  const q = (document.getElementById('usersSearchInput') || {}).value;
+  if (q && q.trim()) {
+    const needle = escQuery(q);
+    list = list.filter(u => userMatches(u, needle));
+  }
+  const dir = usersSort.dir === 'asc' ? 1 : -1;
+  const val = u => usersSort.key === 'wallet' ? (u.walletBalance || 0)
+             : usersSort.key === 'activity' ? (countTrips(u.id) + countBookings(u.id))
+             : (toDate(u.created_time) ? toDate(u.created_time).getTime() : 0);
+  list.sort((a, b) => (val(a) - val(b)) * dir);
+  ['thWallet', 'thJoined', 'thActivity'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const mine = (id === 'thWallet' && usersSort.key === 'wallet')
+              || (id === 'thJoined' && usersSort.key === 'joined')
+              || (id === 'thActivity' && usersSort.key === 'activity');
+    el.classList.toggle('on', mine);
+    const a = el.querySelector('.arrow');
+    if (a) a.textContent = mine ? (usersSort.dir === 'asc' ? '▲' : '▼') : '▲▼';
+  });
+  const c = document.getElementById('usersFilterCount');
+  if (c) c.textContent = list.length === usersBase.length
+    ? usersBase.length.toLocaleString('en-AU') + ' accounts'
+    : list.length.toLocaleString('en-AU') + ' of ' + usersBase.length.toLocaleString('en-AU');
+  renderUsersTable(list);
+}
+
+let usersBase = [];
+function renderUsersTable(users, keepPage) {
+  usersList = users;
+  if (!keepPage) usersPage = 1;
+  buildRoleIndex();
+  if (!LAST_ACTIVITY) buildActivityIndex();
   const tbody = document.getElementById('usersTableBody');
-  if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No users found</p></td></tr>'; return; }
-  tbody.innerHTML = users.map(u => `
+  const pager = document.getElementById('usersPager');
+  if (!tbody) return;
+  if (!users.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty"><p>No users found</p></td></tr>';
+    if (pager) pager.innerHTML = '';
+    return;
+  }
+  const pages = Math.ceil(users.length / USERS_PER_PAGE);
+  if (usersPage > pages) usersPage = pages;
+  const from = (usersPage - 1) * USERS_PER_PAGE;
+  const slice = users.slice(from, from + USERS_PER_PAGE);
+
+  tbody.innerHTML = slice.map(u => {
+    const roles = userRoles(u);
+    const tags = roles.length
+      ? roles.map(r => `<span class="role-tag role-${r}">${r === 'driver' ? 'Driver' : 'Passenger'}</span>`).join('')
+      : '<span class="role-tag role-none">No role</span>';
+    const nat = natMap[getRefId(u.nationality) || u.nationality];
+    const flag = nat && nat.flag
+      ? `<span class="flag-dot" title="${nat.country}"><img src="${nat.flag}" alt="" onerror="this.parentElement.textContent='🌐'"></span>`
+      : (nat ? `<span class="flag-dot" title="${nat.country}">🌐</span>` : '');
+    return `
     <tr onclick="openUserPanel('${u.id}')">
-      <td><div class="user-cell">${avatarHtml(u)}<strong>${displayName(u)}</strong>${bannedBadge(u.id)}</div></td>
-      <td class="mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
-      <td><span class="wallet-amount ${(u.walletBalance||0)>0?'wallet-positive':''}">
-        ${fmtMoney(u.walletBalance || 0)}
-      </span></td>
-      <td>${u.isVerified ? '<span class="badge-status badge-green">Yes</span>' : '<span class="badge-status badge-gray">No</span>'}</td>
-      <td>${u.bankDetails?.isBankDetailsComplete ? '<span class="badge-status badge-green">✓</span>' : '<span class="badge-status badge-gray">✗</span>'}</td>
-      <td class="mono">${fmtDate(u.created_time)}</td>
-    </tr>
-  `).join('');
+      <td class="check-col" onclick="event.stopPropagation()">
+        <input type="checkbox" class="row-check" data-uid="${u.id}" ${SELECTED.has(u.id) ? 'checked' : ''} onclick="toggleSelect('${u.id}', this.checked)">
+      </td>
+      <td>
+        <div class="user-cell">
+          <div class="avatar-wrap">${avatarHtml(u, 34)}${flag}</div>
+          <div class="user-lines">
+            <div class="user-name">${displayName(u)}${bannedBadge(u.id)}</div>
+            <div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+          </div>
+        </div>
+      </td>
+      <td>${tags}</td>
+      <td class="activity-cell"><b>${countTrips(u.id)}</b> trips · <b>${countBookings(u.id)}</b> booked</td>
+      <td><span class="wallet-amount ${(u.walletBalance||0)>0?'wallet-positive':''}">${fmtMoney(u.walletBalance || 0)}</span></td>
+      <td>${u.isVerified
+            ? '<span class="badge-status badge-green">✓</span>'
+            : (u.idPhoto ? '<span class="badge-status badge-yellow">Pending</span>' : '<span class="badge-status badge-red">✗</span>')}</td>
+      <td>${hasBank(u) ? '<span class="badge-status badge-green">✓</span>' : '<span class="badge-status badge-red">✗</span>'}</td>
+      <td class="mono">${fmtDay(u.created_time)}</td>
+    </tr>`;
+  }).join('');
+
+  if (pager) pager.innerHTML = pagerHtml(usersPage, pages, users.length, from, slice.length, 'goUsersPage');
+  refreshSelectionBar();
+}
+
+// A day, without the time: the hour of a sign-up two years ago tells nobody anything.
+function fmtDay(ts) {
+  if (!ts) return '—';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return isNaN(d) ? '—' : d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+// Page numbers around the current one, with the first and the last always reachable.
+function pagerHtml(page, pages, total, from, shown, fn) {
+  const btn = (n) => `<button class="pager-btn${n === page ? ' current' : ''}" onclick="${fn}(${n})">${n}</button>`;
+  const gap = '<span class="pager-gap">…</span>';
+  let nums = '';
+  if (pages <= 7) {
+    for (let n = 1; n <= pages; n++) nums += btn(n);
+  } else {
+    nums += btn(1);
+    if (page > 4) nums += gap;
+    for (let n = Math.max(2, page - 1); n <= Math.min(pages - 1, page + 1); n++) nums += btn(n);
+    if (page < pages - 3) nums += gap;
+    nums += btn(pages);
+  }
+  return `
+    <div class="pager-info">${(from + 1).toLocaleString('en-AU')} to ${(from + shown).toLocaleString('en-AU')} of ${total.toLocaleString('en-AU')}</div>
+    <div class="pager-btns">
+      <button class="pager-btn" onclick="${fn}(${page - 1})" ${page === 1 ? 'disabled' : ''}>Previous</button>
+      ${nums}
+      <button class="pager-btn" onclick="${fn}(${page + 1})" ${page === pages ? 'disabled' : ''}>Next</button>
+    </div>`;
+}
+
+function goUsersPage(n) {
+  const pages = Math.ceil(usersList.length / USERS_PER_PAGE);
+  usersPage = Math.min(Math.max(1, n), pages);
+  renderUsersTable(usersList, true);
+  const card = document.getElementById('usersTableBody');
+  if (card) card.closest('.table-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderTripsTable(trips) {
-  const tbody = document.getElementById('tripsTableBody');
-  if (!trips.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No trips found</p></td></tr>'; return; }
-  tbody.innerHTML = trips.map(t => `
+  renderRows('trips', 'tripsTableBody', trips, 6, t => `
     <tr onclick="openTripPanel('${t.id}')">
       <td class="mono">${fmtDate(t.startTime)}</td>
       <td><strong>${t.startLocation?.city || '?'}</strong> → <strong>${t.endLocation?.city || '?'}</strong></td>
@@ -1166,7 +1709,7 @@ function renderTripsTable(trips) {
       <td>${t.reservedSeats || 0}/${t.totalSeats || '?'}</td>
       <td>${statusBadge(t.status)}</td>
     </tr>
-  `).join('');
+  `, 'No trips found');
 }
 
 // Revenue model: a flat booking fee per payment, then commission on what's left.
@@ -1258,90 +1801,709 @@ const estMark = (source) => source === 'estimate'
 const dashCell = '<td class="mono" style="color:var(--gray-300)">—</td>';
 const warnMark = (w) => w ? ` <span title="${w}" style="cursor:help">⚠</span>` : '';
 
+// One row a booking, and everything that booking did: who paid, who drove, what Rooride
+// kept, what the driver is owed, and what is actually sitting in that driver's wallet
+// today. A refunded booking left nothing behind, so its wallet column reads zero.
 function renderPaymentsTable(payments) {
-  const tbody = document.getElementById('paymentsTableBody');
-  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty"><p>No payments found</p></td></tr>'; return; }
-  tbody.innerHTML = payments.map(p => {
+  // What was kept comes first, what was refunded after: the money that stayed is what
+  // the business is made of.
+  const ordered = payments.slice().sort((a, b) => {
+    const ra = isRefundedPayment(a.paymentStatus) ? 1 : 0;
+    const rb = isRefundedPayment(b.paymentStatus) ? 1 : 0;
+    if (ra !== rb) return ra - rb;
+    return (toDate(b.paymentDate) || 0) - (toDate(a.paymentDate) || 0);
+  });
+  renderRows('payments', 'paymentsTableBody', ordered, 7, p => {
     const b = paymentBreakdown(p);
+    const tripId = getRefId(p.tripId) || p.tripId;
+    const trip = allTrips.find(t => t.id === tripId);
+    const driverId = trip ? (getRefId(trip.driverID) || trip.driverID) : null;
+    const pax = usersMap[getRefId(p.passengerId) || p.passengerId];
+    const drv = driverId ? usersMap[driverId] : null;
+    const credit = driverId ? tripDriverCredit(tripId, driverId) : { amount: null };
+    const inWallet = credit.amount == null ? null : credit.amount;
+
+    const face = (u, withMail) => {
+      if (!u) return '<span style="color:var(--gray-300)">—</span>';
+      const nat = natMap[getRefId(u.nationality) || u.nationality];
+      const flag = nat
+        ? (nat.flag
+            ? `<span class="flag-dot" title="${nat.country}"><img src="${nat.flag}" alt="" onerror="this.parentElement.textContent='🌐'"></span>`
+            : `<span class="flag-dot" title="${nat.country}">🌐</span>`)
+        : '';
+      return `<div class="user-cell">
+        <div class="avatar-wrap">${avatarHtml(u, 32)}${flag}</div>
+        <div class="user-lines">
+          <div class="user-name">${displayName(u)}</div>
+          ${withMail ? `<div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>` : `<div class="user-mail">${fmtDay(p.paymentDate)}</div>`}
+        </div>
+      </div>`;
+    };
+
     return `
     <tr onclick="openPaymentPanel('${p.id}')">
-      <td class="mono">${fmtDate(p.paymentDate)}</td>
-      <td>${getUserName(p.passengerId)}<br><span style="font-size:11px;color:var(--gray-400)">${getUserEmail(p.passengerId)}</span></td>
-      <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
-      ${b.tripPrice === null ? dashCell : `<td class="mono">${fmtMoney(b.tripPrice)}</td>`}
-      ${b.commission === null ? dashCell : `<td class="mono" style="color:var(--red)">− ${fmtMoney(b.commission)}</td>`}
-      ${b.driverShare === null ? dashCell : `<td class="mono" style="font-weight:700;color:var(--orange)">${fmtMoney(b.driverShare)}${warnMark(b.warning)}</td>`}
+      <td>${face(pax, true)}</td>
+      <td>${drv ? `<span onclick="event.stopPropagation();openUserPanel('${driverId}')">${face(drv, false)}</span>` : '<span style="color:var(--gray-300)">—</span>'}</td>
+      <td class="mono" style="text-align:right;font-weight:700">${fmtMoney(p.amount)}</td>
+      <td class="mono" style="text-align:right">${b.commission === null ? '—' : fmtMoney(b.commission + BOOKING_FEE_AUD)}</td>
+      <td class="mono" style="text-align:right;color:var(--orange);font-weight:700">${b.driverShare === null ? '—' : fmtMoney(b.driverShare)}</td>
+      <td class="mono" style="text-align:right">${inWallet === null ? '—' : `<span class="wallet-amount ${inWallet > 0 ? 'wallet-positive' : ''}">${fmtMoney(inWallet)}</span>`}</td>
       <td>${statusBadge(p.paymentStatus)}</td>
-    </tr>
-  `;
-  }).join('');
+    </tr>`;
+  }, 'No booking yet');
 }
 
-function renderOverviewPayments(payments) {
-  const tbody = document.getElementById('overviewPaymentsBody');
-  if (!payments.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty"><p>No payments</p></td></tr>'; return; }
-  tbody.innerHTML = payments.map(p => `
-    <tr onclick="openPaymentPanel('${p.id}')">
-      <td class="mono">${fmtDate(p.paymentDate)}</td>
-      <td>${getUserName(p.passengerId)}</td>
-      <td class="mono" style="font-weight:700">${fmtMoney(p.amount)}</td>
-      <td class="mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</td>
-      <td>${statusBadge(p.paymentStatus)}</td>
-    </tr>
-  `).join('');
+
+// ---- Overview: activity charts, top routes, top nationalities -------------------
+// Everything here is computed from the users and trips already in memory, so the
+// figures follow the live data and never a published snapshot.
+let OVERVIEW_PERIOD = '12m';
+const overviewCharts = {};
+
+const PERIODS = {
+  all:  { months: null, label: 'since the first account' },
+  '12m': { months: 12, label: 'last 12 months' },
+  '6m':  { months: 6,  label: 'last 6 months' },
+  '3m':  { months: 3,  label: 'last 3 months' },
+  '1m':  { months: 1,  label: 'last month' },
+};
+
+function toDate(ts) {
+  if (!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return isNaN(d) ? null : d;
 }
 
-function renderWalletTable(txs) {
-  const tbody = document.getElementById('walletTableBody');
-  if (!txs.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No transactions</p></td></tr>'; return; }
-  tbody.innerHTML = txs.map(t => `
-    <tr onclick="openWalletTxPanel('${t.id}')">
-      <td class="mono">${fmtDate(t.transactionDate)}</td>
-      <td>${getUserName(t.userId)}</td>
-      <td>${statusBadge(t.transactionType)}</td>
-      <td class="mono wallet-amount ${t.transactionType==='credit'?'wallet-positive':'wallet-negative'}">${fmtMoney(t.amount)}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.description || '—'}</td>
-      <td>${statusBadge(t.status)}</td>
-    </tr>
-  `).join('');
+function setOverviewPeriod(key, btn) {
+  OVERVIEW_PERIOD = key;
+  document.querySelectorAll('#overviewPeriodBtns .filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderOverviewActivity();
 }
+
+// Short periods are counted by day, longer ones by month: a single bucket over one
+// month would be one point, which says nothing.
+function bucketise(dates, period) {
+  const cfg = PERIODS[period] || PERIODS['12m'];
+  const now = new Date();
+  let from = null;
+  if (cfg.months) { from = new Date(now); from.setMonth(from.getMonth() - cfg.months); }
+  const byDay = cfg.months !== null && cfg.months <= 3;
+  const kept = dates.filter(d => d && (!from || d >= from));
+  const counts = {};
+  kept.forEach(d => {
+    const k = byDay
+      ? d.toISOString().slice(0, 10)
+      : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  // Fill the empty buckets so a gap reads as zero rather than as a missing period.
+  const keys = [];
+  if (kept.length || from) {
+    const start = from || new Date(Math.min(...kept.map(d => d.getTime())));
+    const cur = new Date(start);
+    if (byDay) {
+      cur.setHours(0, 0, 0, 0);
+      while (cur <= now) { keys.push(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1); }
+    } else {
+      cur.setDate(1); cur.setHours(0, 0, 0, 0);
+      while (cur <= now) { keys.push(cur.getFullYear() + '-' + String(cur.getMonth() + 1).padStart(2, '0')); cur.setMonth(cur.getMonth() + 1); }
+    }
+  }
+  const labels = keys.map(k => byDay
+    ? new Date(k).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })
+    : new Date(k + '-01').toLocaleDateString('en-AU', { month: 'short', year: '2-digit' }));
+  return { labels, values: keys.map(k => counts[k] || 0), total: kept.length, byDay, label: cfg.label };
+}
+
+function drawLine(canvasId, data, colour) {
+  if (typeof Chart === 'undefined') return;
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  if (overviewCharts[canvasId]) overviewCharts[canvasId].destroy();
+  overviewCharts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: data.labels, datasets: [{
+      data: data.values, borderColor: colour, backgroundColor: colour + '22',
+      borderWidth: 2.5, fill: true, tension: 0.35,
+      pointRadius: data.values.length > 40 ? 0 : 3, pointBackgroundColor: colour, pointHoverRadius: 5,
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { displayColors: false, padding: 10 } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 }, color: '#8A8A8A' } },
+        y: { beginAtZero: true, border: { display: false }, grid: { color: '#EFEFEF' },
+             ticks: { precision: 0, font: { size: 10 }, color: '#8A8A8A' } },
+      },
+    },
+  });
+}
+
+function renderOverviewActivity() {
+  const signups = bucketise(allUsers.map(u => toDate(u.created_time)), OVERVIEW_PERIOD);
+  const tripDates = allTrips.map(t => toDate(t.created_time) || toDate(t.startTime));
+  const trips = bucketise(tripDates, OVERVIEW_PERIOD);
+  const unit = signups.byDay ? 'per day' : 'per month';
+  const sSub = document.getElementById('chartSignupsSub');
+  const tSub = document.getElementById('chartTripsSub');
+  if (sSub) sSub.textContent = `${signups.total} accounts created, ${signups.label}, ${unit}`;
+  if (tSub) tSub.textContent = `${trips.total} trips published, ${trips.label}, ${unit}`;
+  drawLine('chartSignups', signups, '#FF6B35');
+  drawLine('chartTrips', trips, '#1F3352');
+}
+
+// The queue is the one part of the dashboard that asks for an action rather than
+// reporting a figure. Each line is a list someone has to work through.
+// What the platform did lately. Only events that carry a date of their own are listed:
+// signing up, publishing a trip, paying for a seat and every wallet movement. Searching
+// for a trip, completing a profile and entering bank details leave no timestamp in the
+// database, so they cannot be shown without inventing one.
+const ACTIVITY_SHOWN = 10;
+
+function timeAgo(d) {
+  const mins = Math.round((Date.now() - d.getTime()) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + ' min ago';
+  const h = Math.round(mins / 60);
+  if (h < 24) return h + (h === 1 ? ' hour ago' : ' hours ago');
+  const days = Math.round(h / 24);
+  if (days < 31) return days + (days === 1 ? ' day ago' : ' days ago');
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function buildActivity() {
+  const ev = [];
+  const push = (date, colour, html) => { if (date) ev.push({ date, colour, html }); };
+
+  allUsers.forEach(u => push(toDate(u.created_time), '#3B82F6',
+    `<span class="act-who">${displayName(u)}</span> created an account`));
+
+  allTrips.forEach(t => push(toDate(t.created_time) || toDate(t.startTime), '#FF6B35',
+    `<span class="act-who">${getUserName(t.driverID)}</span> published a trip, ${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}, ${fmtMoney(t.pricePerSeat)} a seat`));
+
+  allPayments.forEach(p => push(toDate(p.paymentDate), '#22C55E',
+    `<span class="act-who">${getUserName(p.passengerId)}</span> paid ${fmtMoney(p.amount)} for a seat, ${p.startLocation?.city || '?'} to ${p.endLocation?.city || '?'}`));
+
+  allWalletTx.forEach(t => {
+    const type = (t.transactionType || '').toLowerCase();
+    const who = `<span class="act-who">${getUserName(t.userId)}</span>`;
+    let colour = '#8A8A8A', text;
+    if (type.includes('tripearning')) { colour = '#22C55E'; text = `${who} earned ${fmtMoney(t.amount)} on a completed trip`; }
+    else if (type.includes('banktransfer')) { colour = '#1F3352'; text = `${who} was paid out ${fmtMoney(Math.abs(t.amount))}`; }
+    // Credit reversals are the bookkeeping side of a refund, not an event of their own.
+    // They stay on the Wallet Transactions page and out of this feed.
+    else if (type.includes('refundreversal')) { return; }
+    else text = `${who}, wallet movement of ${fmtMoney(t.amount)}`;
+    push(toDate(t.transactionDate), colour, text);
+  });
+
+  return ev.sort((a, b) => b.date - a.date);
+}
+
+function renderOverviewActivityFeed() {
+  const box = document.getElementById('overviewActivity');
+  if (!box) return;
+  const ev = buildActivity();
+  if (!ev.length) { box.innerHTML = '<div class="empty" style="padding:24px;"><p>Nothing yet</p></div>'; return; }
+  box.innerHTML = ev.slice(0, ACTIVITY_SHOWN).map(e => `
+    <div class="act-row">
+      <div class="act-dot" style="background:${e.colour}"></div>
+      <div class="act-text">${e.html}</div>
+      <div class="act-meta">${timeAgo(e.date)}</div>
+    </div>`).join('');
+}
+
+// The money line of the Quick view. Gross is everything ever charged, including what
+// was refunded afterwards; commission is what the platform actually kept on the
+// bookings that were not refunded, on the formula applied in production.
+// Each badge compares the last 30 days with the 30 days before them, on the dates the
+// records carry. A figure with no history, like the wallet, gets no badge.
+function setBadge(id, now, before) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const pct = before ? Math.round((now - before) / before * 100) : (now ? 100 : 0);
+  el.style.display = 'inline-block';
+  el.className = 'cell-badge ' + (pct > 0 ? 'up' : pct < 0 ? 'down' : '');
+  el.textContent = (pct > 0 ? '+' : '') + pct + '%';
+  el.title = 'Last 30 days against the 30 days before';
+}
+
+function renderQuickBadges() {
+  const day = 86400000, now = Date.now();
+  const inWindow = (d, from, to) => d && d.getTime() >= now - from * day && d.getTime() < now - to * day;
+  const countIn = (dates, from, to) => dates.filter(d => inWindow(d, from, to)).length;
+  const sumIn = (rows, from, to) => rows.filter(r => inWindow(r.d, from, to)).reduce((n, r) => n + r.v, 0);
+
+  setBadge('statUsersBadge', countIn(allUsers.map(u => toDate(u.created_time)), 30, 0),
+                              countIn(allUsers.map(u => toDate(u.created_time)), 60, 30));
+  const tripDates = allTrips.map(t => toDate(t.created_time) || toDate(t.startTime));
+  setBadge('statTripsBadge', countIn(tripDates, 30, 0), countIn(tripDates, 60, 30));
+  // No badge on the money cards or on the bookings: with eleven payments spread over
+  // two years, a 30-day comparison would read 0% and say nothing.
+}
+
+function renderQuickMoney() {
+  const gross = allPayments.reduce((n, p) => n + (Number(p.amount) || 0), 0);
+  const kept = allPayments.filter(p => !isRefundedPayment(p.paymentStatus));
+  const keptGross = kept.reduce((n, p) => n + (Number(p.amount) || 0), 0);
+  const commission = kept.reduce((n, p) => {
+    const b = paymentBreakdown(p);
+    return n + (b.commission === null ? 0 : b.commission + BOOKING_FEE_AUD);
+  }, 0);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('statGross', fmtMoney(keptGross));
+  set('statGrossSub', 'Total money in circulation');
+  set('statCommission', fmtMoney(commission));
+  // The card counts the bookings the platform kept. The refunded ones are money that
+  // came in and went straight back out, so they say nothing about activity.
+  set('statPayments', kept.length);
+  const refunded = allPayments.length - kept.length;
+  set('statPaymentsSub', 'Trips completed');
+}
+
+// A few faces, so the count reads as people rather than as a number.
+function renderUserAvatars() {
+  const box = document.getElementById('statUsersAvatars');
+  if (!box) return;
+  // A photo_url is not a photo: some of them 404 and leave an empty circle. The
+  // candidates are loaded first, and only the three that actually come back are shown.
+  box.innerHTML = '';
+  const candidates = allUsers.filter(u => u.photo_url).slice(0, 40);
+  if (!candidates.length) return;
+  // Each candidate is loaded and measured before it is used. A url that answers with a
+  // placeholder or an error leaves an empty circle, so only real images get through.
+  const ok = [];
+  let left = candidates.length;
+  const done = () => { box.innerHTML = ok.slice(0, 3).map(u => avatarHtml(u, 30)).join(''); };
+  candidates.forEach(u => {
+    const img = new Image();
+    img.onload = () => { if (img.naturalWidth > 10 && img.naturalHeight > 10) ok.push(u); if (--left === 0) done(); };
+    img.onerror = () => { if (--left === 0) done(); };
+    img.src = u.photo_url;
+  });
+}
+
+function renderOverviewTodo() {
+  const noBank = u => !(u.bankDetails && u.bankDetails.isBankDetailsComplete);
+  const pendingId = allUsers.filter(u => u.idPhoto && !u.isVerified);
+  const owedNoBank = allUsers.filter(u => (u.walletBalance || 0) > 0 && noBank(u));
+  const payable = allUsers.filter(u => (u.walletBalance || 0) > 0 && !noBank(u));
+  const driverIds = new Set(allTrips.map(t => getRefId(t.driverID) || t.driverID).filter(Boolean));
+  const driversNoBank = allUsers.filter(u => driverIds.has(u.id) && noBank(u));
+  const owedTotal = owedNoBank.reduce((n, u) => n + (u.walletBalance || 0), 0);
+  const payableTotal = payable.reduce((n, u) => n + (u.walletBalance || 0), 0);
+
+  // How many completed trips a balance is made of, read from the wallet ledger rather
+  // than guessed: one tripEarning line is one trip that earned the driver something.
+  const tripsBehind = users => {
+    const ids = new Set(users.map(u => u.id));
+    return allWalletTx.filter(t =>
+      /tripearning/i.test(t.transactionType || '') &&
+      (t.amount || 0) > 0 &&
+      ids.has(getRefId(t.userId) || t.userId)
+    ).length;
+  };
+  const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+
+  const rows = [
+    { n: payable.length,
+      tone: 'done',
+      title: 'Drivers to pay now',
+      sub: payable.length
+        ? plural(tripsBehind(payable), 'trip') + ' completed, bank details on file. Make the transfer: ' + fmtMoney(payableTotal) + '.'
+        : 'Nobody is waiting on a transfer.',
+      action: 'See the list', onclick: "showUserFilter('payable')" },
+    { n: owedNoBank.length,
+      tone: owedNoBank.length ? 'alert' : 'done',
+      title: 'Drivers owed money with no bank details',
+      sub: owedNoBank.length
+        ? plural(tripsBehind(owedNoBank), 'trip') + ' completed, no bank details. Email the driver to set them up: ' + fmtMoney(owedTotal) + ' held.'
+        : 'No balance is stuck.',
+      action: 'See the list', onclick: "showUserFilter('owedNoBank')" },
+    { n: pendingId.length,
+      tone: pendingId.length ? 'warn' : 'done',
+      title: 'Identities to verify',
+      sub: pendingId.length
+        ? 'Document submitted by the driver. Approve it or reject it with a reason.'
+        : 'Nothing waiting.',
+      action: 'Work the queue', onclick: "switchPage('verification')" },
+    { n: driversNoBank.length,
+      tone: driversNoBank.length ? 'warn' : 'done',
+      title: 'Drivers with no bank details',
+      sub: driversNoBank.length
+        ? 'They have published a trip. They will earn before they can be paid: ask them for their details.'
+        : 'Every driver can be paid.',
+      action: 'See the list', onclick: "showUserFilter('driversNoBank')" },
+  ];
+
+  const box = document.getElementById('overviewTodo');
+  if (box) box.innerHTML = rows.map(r => `
+    <div class="todo-row">
+      <div class="todo-count ${r.tone}">${r.n}</div>
+      <div class="todo-text">
+        <div class="todo-title">${r.title}</div>
+        <div class="todo-sub">${r.sub}</div>
+      </div>
+      <button class="todo-btn" onclick="${r.onclick}">${r.action}</button>
+    </div>`).join('');
+}
+
+// Sends the user to the Users page with one of the queues already applied, rather
+// than leaving them to find those accounts by hand among five thousand.
+const USER_FILTERS = {
+  payable: {
+    text: 'Drivers to pay now',
+    fn: u => (u.walletBalance || 0) > 0 && (u.bankDetails && u.bankDetails.isBankDetailsComplete),
+  },
+  owedNoBank: {
+    text: 'Drivers owed money with no bank details',
+    fn: u => (u.walletBalance || 0) > 0 && !(u.bankDetails && u.bankDetails.isBankDetailsComplete),
+  },
+  driversNoBank: {
+    text: 'Drivers with no bank details',
+    fn: u => !(u.bankDetails && u.bankDetails.isBankDetailsComplete),
+    driversOnly: true,
+  },
+};
+
+function showUserFilter(key) {
+  const f = USER_FILTERS[key];
+  if (!f) return;
+  let list = allUsers.filter(f.fn);
+  if (f.driversOnly) {
+    const driverIds = new Set(allTrips.map(t => getRefId(t.driverID) || t.driverID).filter(Boolean));
+    list = list.filter(u => driverIds.has(u.id));
+  }
+  switchPage('users');
+  const input = document.getElementById('usersSearchInput');
+  if (input) input.value = '';
+  const notice = document.getElementById('usersNotice');
+  const text = document.getElementById('usersNoticeText');
+  if (text) text.textContent = f.text + ': ' + list.length + ' accounts';
+  if (notice) notice.style.display = 'flex';
+  renderUsersTable(list);
+}
+
+function clearUserFilter() {
+  const notice = document.getElementById('usersNotice');
+  if (notice) notice.style.display = 'none';
+  const input = document.getElementById('usersSearchInput');
+  if (input) input.value = '';
+  renderUsersTable(allUsers);
+}
+
+function renderOverviewTops() {
+  // Routes
+  const routes = {};
+  allTrips.forEach(t => {
+    const a = t.startLocation?.city, b = t.endLocation?.city;
+    if (!a || !b) return;
+    const k = a + '|' + b;
+    if (!routes[k]) routes[k] = { from: a, to: b, count: 0, priceSum: 0, priced: 0 };
+    routes[k].count++;
+    const p = Number(t.pricePerSeat);
+    if (p > 0) { routes[k].priceSum += p; routes[k].priced++; }
+  });
+  const top = Object.values(routes).sort((x, y) => y.count - x.count).slice(0, 10);
+  const rBody = document.getElementById('overviewRoutesBody');
+  if (rBody) rBody.innerHTML = top.length
+    ? top.map(r => `
+      <tr>
+        <td><strong>${r.from}</strong></td>
+        <td><strong>${r.to}</strong></td>
+        <td class="mono" style="text-align:right;font-weight:700">${r.count}</td>
+        <td class="mono" style="text-align:right">${r.priced ? fmtMoney(r.priceSum / r.priced) : '—'}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty"><p>No route yet</p></td></tr>';
+
+  // Nationalities
+  const counts = {};
+  allUsers.forEach(u => {
+    if (!u.nationality) return;
+    const id = getRefId(u.nationality) || u.nationality;
+    counts[id] = (counts[id] || 0) + 1;
+  });
+  const entries = Object.entries(counts).map(([key, count]) => {
+    const nat = natMap[key];
+    return { country: nat ? nat.country : key, flag: nat ? nat.flag : null, count };
+  })
+  // "World citizen" is an answer, not a country: it says nothing about the audience.
+  .filter(e => !/world\s*citizen/i.test(e.country || ''))
+  .sort((a, b) => b.count - a.count);
+  const given = entries.reduce((n, e) => n + e.count, 0);
+  const max = entries[0]?.count || 1;
+  const nBody = document.getElementById('overviewNatBody');
+  if (nBody) nBody.innerHTML = entries.length
+    ? entries.slice(0, 10).map(e => `
+      <div class="nat-row">
+        <div class="nat-flag">${e.flag ? `<img src="${e.flag}" alt="" onerror="this.style.display='none'">` : '🌐'}</div>
+        <div class="nat-country">${e.country}</div>
+        <div class="nat-bar-wrap"><div class="nat-bar" style="width:${Math.round(e.count / max * 100)}%"></div></div>
+        <div class="nat-count">${e.count}</div>
+        <div class="nat-pct">${given ? Math.round(e.count / given * 100) : 0}%</div>
+      </div>`).join('')
+    : '<div class="empty"><p>No nationality provided</p></div>';
+}
+
+
+function renderWalletTable() { /* the wallet is read inside each booking row */ }
+
+
 
 // ── Filters ──
 function filterUsersTable() {
-  const q = escQuery(document.getElementById('usersSearchInput').value);
-  const filtered = allUsers.filter(u =>
-    (u.email || '').toLowerCase().includes(q) ||
-    (u.display_name || '').toLowerCase().includes(q) ||
-    (u.firstName || '').toLowerCase().includes(q) ||
-    (u.lastName || '').toLowerCase().includes(q)
-  );
-  renderUsersTable(filtered);
+  // The search box is one of the three things that decide the view, with the filters
+  // and the sort, so it goes through the same place rather than drawing on its own.
+  applyUserView();
 }
 
-function filterTrips(type, btn) {
-  document.querySelectorAll('#page-trips .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (type === 'all') renderTripsTable(allTrips);
-  else if (type === 'noPassengers') renderTripsTable(allTrips.filter(t => !t.reservedSeats || t.reservedSeats === 0));
-  else renderTripsTable(allTrips.filter(t => t.reservedSeats && t.reservedSeats > 0));
+// The box now covers what the separate Advanced search page used to: a person is found
+// by name, email, phone, account identifier, or by any Stripe payment they made.
+function userMatches(u, needle) {
+  if ((u.email || '').toLowerCase().includes(needle)) return true;
+  if (String(displayName(u)).toLowerCase().includes(needle)) return true;
+  if ((u.display_name || '').toLowerCase().includes(needle)) return true;
+  if ((u.firstName || '').toLowerCase().includes(needle)) return true;
+  if ((u.lastName || '').toLowerCase().includes(needle)) return true;
+  if ((u.phone_number || '').includes(needle)) return true;
+  if (String(u.id).toLowerCase().includes(needle)) return true;
+  if (needle.length > 6 && allPayments.some(p =>
+      (getRefId(p.passengerId) || p.passengerId) === u.id &&
+      String(p.stripePaymentId || '').toLowerCase().includes(needle))) return true;
+  return false;
+}
+
+// Trips are read by route, not one by one: five hundred rows say nothing, while
+// "Sydney to Melbourne, 17 trips, 3 booked" says where the platform actually works.
+let TRIP_FILTER = 'all';
+let TRIP_PERIOD = 'all';
+let TRIP_BOTHWAYS = false;
+let ROUTE_FILTER = 'all';
+// Sorting: every figure in the table can be read from the biggest or the smallest.
+// The default puts the routes that actually converted at the top.
+let routesSort = { key: 'default', dir: 'desc' };
+
+function sortRoutesBy(key) {
+  if (routesSort.key === key) routesSort.dir = routesSort.dir === 'asc' ? 'desc' : 'asc';
+  else routesSort = { key, dir: 'desc' };
+  renderRoutes();
+}
+// One route open at a time: opening another closes the one before, so the table never
+// turns into a wall of expanded blocks.
+let OPEN_ROUTE = null;
+
+// Ten routes a page, like the accounts. Three hundred rows of city pairs is a list,
+// not a reading.
+const ROUTES_PER_PAGE = 10;
+let routesPage = 1;
+
+function goRoutesPage(n) {
+  routesPage = Math.max(1, n);
+  OPEN_ROUTE = null;
+  renderRoutes(true);
+  const card = document.getElementById('tripsTableBody');
+  if (card) card.closest('.table-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleRoute(key) {
+  OPEN_ROUTE = (OPEN_ROUTE === key) ? null : key;
+  renderRoutes();
+}
+
+// Seats taken over seats offered: the one number that says whether a marketplace works.
+// Seats paid for and kept. A booking that was refunded did not happen, so it counts
+// neither as a seat taken nor as money earned.
+function fillCell(r) {
+  if (!r.offered) return '<span class="fill-sub">no seat</span>';
+  const pct = r.seatsPaid / r.offered * 100;
+  const colour = pct >= 8 ? '#22C55E' : pct > 0 ? '#F59E0B' : '#E5E5E5';
+  const text = pct >= 8 ? '#166534' : pct > 0 ? '#92400E' : '#8A8A8A';
+  return `<div class="fill-cell">
+    <span class="fill-pct" style="color:${text}">${pct.toFixed(1)}%</span>
+    <div class="fill-track"><div class="fill-bar" style="width:${Math.min(100, Math.max(pct ? 3 : 0, pct * 4))}%;background:${colour}"></div></div>
+    <span class="fill-sub">${r.seatsPaid} of ${r.offered}</span>
+  </div>`;
+}
+
+
+
+function renderRoutes(keepPage) {
+  const tbody = document.getElementById('tripsTableBody');
+  if (!tbody) return;
+  if (!allTrips.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading"><span class="spinner"></span> Loading...</td></tr>';
+    return;
+  }
+
+  const q = escQuery((document.getElementById('tripsSearchInput') || {}).value || '');
+  const booked = t => (t.reservedSeats || 0) > 0;
+  const cancelled = t => /cancel/i.test(t.status || '');
+
+  const months = { '12m': 12, '6m': 6, '3m': 3, '1m': 1 }[TRIP_PERIOD];
+  let from = null;
+  if (months) { from = new Date(); from.setMonth(from.getMonth() - months); }
+
+  let trips = allTrips.filter(t => {
+    if (TRIP_FILTER === 'booked' && !booked(t)) return false;
+    if (TRIP_FILTER === 'empty' && booked(t)) return false;
+    if (TRIP_FILTER === 'cancelled' && !cancelled(t)) return false;
+    if (from) {
+      const d = toDate(t.created_time) || toDate(t.startTime);
+      if (!d || d < from) return false;
+    }
+    if (q) {
+      const hay = ((t.startLocation?.city || '') + ' ' + (t.endLocation?.city || '') + ' ' + getUserName(t.driverID)).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // What a trip actually earned, read from the payments rather than guessed.
+  const paidByTrip = {};
+  allPayments.forEach(p => {
+    if (isRefundedPayment(p.paymentStatus)) return;
+    const id = getRefId(p.tripId) || p.tripId;
+    if (!id) return;
+    (paidByTrip[id] = paidByTrip[id] || []).push(p);
+  });
+
+  const routes = {};
+  let incomplete = 0;
+  trips.forEach(t => {
+    const a = t.startLocation?.city, b = t.endLocation?.city;
+    // A trip missing one end of its route is not a route: it is left out of this view.
+    if (!a || !b) { incomplete++; return; }
+    // Sydney to Melbourne and Melbourne to Sydney are one corridor when asked for.
+    const key = TRIP_BOTHWAYS ? [a, b].sort().join('|') : a + '|' + b;
+    if (!routes[key]) {
+      const [x, y] = TRIP_BOTHWAYS ? [a, b].sort() : [a, b];
+      routes[key] = { key, from: x, to: y, trips: [], booked: 0, seats: 0, offered: 0, priceSum: 0, priced: 0, earned: 0, seatsPaid: 0 };
+    }
+    const r = routes[key];
+    r.trips.push(t);
+    if (booked(t)) r.booked++;
+    r.seats += t.reservedSeats || 0;
+    r.offered += Number(t.totalSeats) || 0;
+    r.seatsPaid += (paidByTrip[t.id] || []).length;
+
+    (paidByTrip[t.id] || []).forEach(p => { r.earned += Number(p.amount) || 0; });
+    const p = Number(t.pricePerSeat);
+    if (p > 0) { r.priceSum += p; r.priced++; }
+  });
+
+  let list = Object.values(routes);
+  if (ROUTE_FILTER === 'converts') list = list.filter(r => r.seatsPaid > 0);
+  if (ROUTE_FILTER === 'dead') list = list.filter(r => r.seatsPaid === 0);
+  // Routes that converted come first: they are the only ones that say anything.
+  const value = r => ({
+    trips: r.trips.length,
+    offered: r.offered,
+    fill: r.offered ? r.seatsPaid / r.offered : -1,
+    price: r.priced ? r.priceSum / r.priced : -1,
+    earned: r.earned,
+  })[routesSort.key];
+
+  if (routesSort.key === 'default') {
+    list.sort((a, b) => (b.seatsPaid > 0) - (a.seatsPaid > 0) || b.seatsPaid - a.seatsPaid || b.trips.length - a.trips.length);
+  } else {
+    const dir = routesSort.dir === 'asc' ? 1 : -1;
+    list.sort((a, b) => (value(a) - value(b)) * dir);
+  }
+
+  [['thRtTrips', 'trips'], ['thRtSeats', 'offered'], ['thRtFill', 'fill'], ['thRtPrice', 'price'], ['thRtEarned', 'earned']]
+    .forEach(([id, key]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const mine = routesSort.key === key;
+      el.classList.toggle('on', mine);
+      const a = el.querySelector('.arrow');
+      if (a) a.textContent = mine ? (routesSort.dir === 'asc' ? '▲' : '▼') : '▲▼';
+    });
+  const count = document.getElementById('routesCount');
+  if (count) count.textContent = list.length + (list.length === 1 ? ' route · ' : ' routes · ')
+    + (trips.length - incomplete) + ' trips'
+    + (incomplete ? ' · ' + incomplete + ' with an incomplete route, not shown' : '');
+
+  const pager = document.getElementById('routesPager');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty"><p>No route matches</p></td></tr>';
+    if (pager) pager.innerHTML = '';
+    return;
+  }
+
+  if (!keepPage && routesPage !== 1 && (routesPage - 1) * ROUTES_PER_PAGE >= list.length) routesPage = 1;
+  const pages = Math.ceil(list.length / ROUTES_PER_PAGE);
+  if (routesPage > pages) routesPage = pages;
+  const fromRow = (routesPage - 1) * ROUTES_PER_PAGE;
+  const shown = list.slice(fromRow, fromRow + ROUTES_PER_PAGE);
+  if (pager) pager.innerHTML = pagerHtml(routesPage, pages, list.length, fromRow, shown.length, 'goRoutesPage');
+
+  const caret = '<svg class="route-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+
+  tbody.innerHTML = shown.map(r => {
+    const open = OPEN_ROUTE === r.key;
+    const rows = open ? r.trips
+      .slice()
+      .sort((a, b) => (toDate(b.startTime) || 0) - (toDate(a.startTime) || 0))
+      .map(t => {
+        const pays = paidByTrip[t.id] || [];
+        const paid = pays.reduce((n, p) => n + (Number(p.amount) || 0), 0);
+        const pax = pays.map(p => {
+          const id = getRefId(p.passengerId) || p.passengerId;
+          const name = getUserName(p.passengerId);
+          return id && usersMap[id]
+            ? `<a class="tl-link" onclick="event.stopPropagation();openUserPanel('${id}')">${name}</a>`
+            : name;
+        }).filter(Boolean);
+        const who = TRIP_BOTHWAYS ? `${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'} · ` : '';
+        return `
+        <div class="trip-line${pays.length ? ' paid' : ''}" onclick="openTripPanel('${t.id}')">
+          <span class="tl-date">${fmtDay(t.startTime)}</span>
+          <span class="tl-driver">${who}<a class="tl-link" onclick="event.stopPropagation();openUserPanel('${getRefId(t.driverID) || t.driverID}')">${getUserName(t.driverID)}</a>${pax.length ? ` <span class="tl-pax">· with ${pax.join(', ')}</span>` : ''}</span>
+          ${statusBadge(t.status)}
+          <span class="tl-seats">${t.reservedSeats || 0}/${t.totalSeats || '?'} seats</span>
+          ${pays.length
+            ? `<span class="tl-earned">${fmtMoney(paid)}</span>`
+            : `<span class="tl-price">${fmtMoney(t.pricePerSeat)}</span>`}
+        </div>`;
+      }).join('') : '';
+
+    return `
+      <tr class="route-row${open ? ' open' : ''}${r.seatsPaid ? '' : ' dead'}" onclick="toggleRoute('${r.key.replace(/'/g, "")}')">
+        <td><div class="route-name">${caret}${r.from}</div></td>
+        <td style="font-weight:700">${r.to}</td>
+        <td class="mono" style="text-align:right">${r.trips.length}</td>
+        <td class="mono" style="text-align:right">${r.offered || '—'}</td>
+        <td style="text-align:right">${fillCell(r)}</td>
+        <td class="mono" style="text-align:right">${r.priced ? fmtMoney(r.priceSum / r.priced) : '—'}</td>
+        <td class="mono" style="text-align:right">${r.earned ? '<span style="color:var(--orange);font-weight:700">' + fmtMoney(r.earned) + '</span>' : '—'}</td>
+      </tr>
+      ${open ? `<tr class="trip-sub"><td colspan="7">${rows}</td></tr>` : ''}`;
+  }).join('');
 }
 
 function filterPaymentsTable() {
   const q = escQuery(document.getElementById('paymentsSearchInput').value);
-  const filtered = allPayments.filter(p =>
-    (p.stripePaymentId || '').toLowerCase().includes(q) ||
-    getUserName(p.passengerId).toLowerCase().includes(q) ||
-    getUserEmail(p.passengerId).toLowerCase().includes(q)
-  );
+  const filtered = allPayments.filter(p => {
+    const trip = allTrips.find(t => t.id === (getRefId(p.tripId) || p.tripId));
+    const driver = trip ? getUserName(trip.driverID) : '';
+    return (p.stripePaymentId || '').toLowerCase().includes(q)
+      || getUserName(p.passengerId).toLowerCase().includes(q)
+      || getUserEmail(p.passengerId).toLowerCase().includes(q)
+      || driver.toLowerCase().includes(q);
+  });
   renderPaymentsTable(filtered);
 }
 
 // ── Panels ──
 function openPanel(title, html) {
+  const panel = document.getElementById('sidePanel');
   document.getElementById('panelTitle').textContent = title;
   document.getElementById('panelBody').innerHTML = html;
+  document.getElementById('panelBody').scrollTop = 0;
   document.getElementById('panelOverlay').classList.add('open');
-  document.getElementById('sidePanel').classList.add('open');
+  panel.classList.add('open');
 }
 
 function closePanel() {
@@ -1349,70 +2511,416 @@ function closePanel() {
   document.getElementById('sidePanel').classList.remove('open');
 }
 
+// The same building blocks in every panel, so a trip, a payment and a person are read
+// the same way: one head, the money if there is any, then the links.
+function panelHead(avatar, title, sub, tags) {
+  return `
+    <div class="profile-head">
+      ${avatar}
+      <div style="min-width:0">
+        <div class="ph-name">${title}</div>
+        ${sub ? `<div class="ph-mail">${sub}</div>` : ''}
+        ${tags ? `<div class="ph-tags">${tags}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function panelIcon(svgPath, tone) {
+  return `<div class="panel-icon${tone ? ' ' + tone : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg></div>`;
+}
+
+function moneyStrip(boxes) {
+  return `<div class="money-strip">` + boxes.map(b => `
+    <div class="money-box ${b.tone || ''}">
+      <div class="mb-label">${b.label}</div>
+      <div class="mb-value">${b.value}</div>
+    </div>`).join('') + `</div>`;
+}
+
+// A person is always shown the same way: face, name, email, and it opens their file.
+function personRow(ref, role) {
+  const id = getRefId(ref) || ref;
+  const u = usersMap[id];
+  if (!u) return `<p style="font-size:13px;color:var(--gray-400)">Account not found</p>`;
+  return `
+    <div class="person-row" onclick="openUserPanel('${id}')">
+      ${avatarHtml(u, 36)}
+      <div style="min-width:0;flex:1">
+        <div class="pr-name">${displayName(u)}${bannedBadge(id)}</div>
+        <div class="pr-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+      </div>
+      ${role ? `<span class="role-tag role-${role}">${role === 'driver' ? 'Driver' : 'Passenger'}</span>` : ''}
+    </div>`;
+}
+
+// Free notes on a person, so the next time this file is opened it says what was already
+// done. They live on the account record and are never shown in the anonymised view.
+// Duplicate check. Three signals, from the strongest to the weakest: the same phone
+// number, the same name, and two email addresses that differ only by a dot, a plus tag
+// or a digit at the end. Nothing is merged or deleted here: it reports, you decide.
+// Acting on several people at once. The selection survives paging and filtering, so a
+// list built across three pages is still whole when the action is taken.
+const SELECTED = new Set();
+
+function toggleSelect(uid, on) {
+  if (on) SELECTED.add(uid); else SELECTED.delete(uid);
+  refreshSelectionBar();
+}
+function toggleAllOnPage(on) {
+  document.querySelectorAll('#usersTableBody .row-check').forEach(c => {
+    c.checked = on;
+    if (on) SELECTED.add(c.dataset.uid); else SELECTED.delete(c.dataset.uid);
+  });
+  refreshSelectionBar();
+}
+function clearSelection() {
+  SELECTED.clear();
+  document.querySelectorAll('.row-check').forEach(c => { c.checked = false; });
+  refreshSelectionBar();
+}
+function refreshSelectionBar() {
+  const bar = document.getElementById('usersSelBar');
+  const count = document.getElementById('usersSelCount');
+  if (!bar) return;
+  bar.classList.toggle('on', SELECTED.size > 0);
+  if (count) count.textContent = SELECTED.size + (SELECTED.size === 1 ? ' person selected' : ' people selected');
+  const all = document.getElementById('usersCheckAll');
+  if (all) {
+    const onPage = [...document.querySelectorAll('#usersTableBody .row-check')];
+    all.checked = onPage.length > 0 && onPage.every(c => SELECTED.has(c.dataset.uid));
+  }
+}
+const selectedUsers = () => [...SELECTED].map(id => usersMap[id]).filter(Boolean);
+const selectionEmails = () => selectedUsers().map(u => u.email).filter(Boolean);
+
+function emailSelection() {
+  const mails = selectionEmails();
+  if (!mails.length) return alert('None of the selected accounts has an email address.');
+  // Blind copy, so nobody sees the others' addresses.
+  window.location.href = 'mailto:?bcc=' + encodeURIComponent(mails.join(','));
+}
+function copySelectionEmails() {
+  const mails = selectionEmails();
+  if (!mails.length) return alert('None of the selected accounts has an email address.');
+  navigator.clipboard.writeText(mails.join(', '))
+    .then(() => alert(mails.length + ' address' + (mails.length === 1 ? '' : 'es') + ' copied.'))
+    .catch(() => alert('Could not copy. The addresses are:\n\n' + mails.join('\n')));
+}
+
+// Export of the list as it is on screen, filters and sort included. Closed to the
+// anonymised account: the file would carry the whole user base out of the platform.
+function exportUsersCsv() {
+  if (PRIVACY_MODE) return;
+  const rows = usersList;
+  if (!rows.length) return alert('Nothing to export.');
+  const head = ['Name', 'Email', 'Phone', 'Nationality', 'Driver', 'Passenger', 'Trips', 'Bookings',
+                'Wallet AUD', 'Identity', 'Bank details', 'Banned', 'Joined', 'Account ID'];
+  const cell = v => {
+    const t = String(v == null ? '' : v).replace(/"/g, '""');
+    return /[",\n;]/.test(t) ? '"' + t + '"' : t;
+  };
+  const lines = [head.join(',')].concat(rows.map(u => {
+    const nat = natMap[getRefId(u.nationality) || u.nationality];
+    const joined = toDate(u.created_time);
+    return [
+      displayName(u), u.email || '', u.phone_number || '', nat ? nat.country : '',
+      DRIVER_IDS.has(u.id) ? 'yes' : 'no', PASSENGER_IDS.has(u.id) ? 'yes' : 'no',
+      countTrips(u.id), countBookings(u.id), (u.walletBalance || 0).toFixed(2),
+      idState(u), hasBank(u) ? 'yes' : 'no', isBanned(u.id) ? 'yes' : 'no',
+      joined ? joined.toISOString().slice(0, 10) : '', u.id,
+    ].map(cell).join(',');
+  }));
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rooride-users-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// The buttons that take data out of the platform are closed in the anonymised view.
+function lockExportForDd() {
+  const btn = document.getElementById('btnExportUsers');
+  if (!btn) return;
+  if (PRIVACY_MODE) {
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    btn.style.cursor = 'default';
+    btn.title = 'Exporting is closed during the review';
+    btn.textContent = 'Export';
+    btn.insertAdjacentHTML('afterbegin',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+      'style="width:12px;height:12px;margin-right:5px;vertical-align:-1px;">' +
+      '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>');
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.title = 'Download the list as shown, filters included';
+  }
+}
+
+function runDuplicateCheck() {
+  const groups = [];
+  const seen = new Set();
+
+  const addGroup = (reason, value, users) => {
+    if (users.length < 2) return;
+    const key = users.map(u => u.id).sort().join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    groups.push({ reason, value, users });
+  };
+
+  const byKey = (keyOf) => {
+    const map = {};
+    allUsers.forEach(u => {
+      const k = keyOf(u);
+      if (!k) return;
+      (map[k] = map[k] || []).push(u);
+    });
+    return map;
+  };
+
+  const phones = byKey(u => (u.phone_number || '').replace(/[^0-9]/g, '').slice(-9) || null);
+  Object.entries(phones).forEach(([k, us]) => { if (k.length >= 8) addGroup('Same phone number', k, us); });
+
+  const names = byKey(u => {
+    const n = String(displayName(u)).toLowerCase().replace(/[^a-z\u00c0-\u024f ]/g, '').replace(/\s+/g, ' ').trim();
+    return n.length > 4 && n.includes(' ') ? n : null;
+  });
+  Object.entries(names).forEach(([k, us]) => addGroup('Same name', k, us));
+
+  // john.doe+ride@gmail.com, johndoe2@gmail.com and john.doe@gmail.com share a root.
+  const mails = byKey(u => {
+    const e = (u.email || '').toLowerCase().trim();
+    if (!e.includes('@')) return null;
+    const [local, domain] = e.split('@');
+    const root = local.split('+')[0].replace(/\./g, '').replace(/\d+$/, '');
+    return root.length >= 4 ? root + '@' + domain : null;
+  });
+  Object.entries(mails).forEach(([k, us]) => addGroup('Near-identical email', k, us));
+
+  const tests = allUsers.filter(u => /(^|[^a-z])(test|demo|fake|essai)([^a-z]|$)/i.test((u.email || '') + ' ' + String(displayName(u))));
+
+  const total = groups.reduce((n, g) => n + g.users.length, 0);
+  const row = u => `
+    <div class="dup-row" onclick="openUserPanel('${u.id}')">
+      ${avatarHtml(u, 30)}
+      <div style="min-width:0">
+        <div class="dr-name">${displayName(u)}</div>
+        <div class="dr-sub">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+      </div>
+      <div class="dr-right">${fmtDay(u.created_time)}<br>${countTrips(u.id)} trips · ${countBookings(u.id)} booked · ${fmtMoney(u.walletBalance || 0)}</div>
+    </div>`;
+
+  const html = `
+    <div class="detail-section">
+      <h4>What was checked</h4>
+      <p style="font-size:13px;line-height:1.6;color:var(--gray-400);">
+        ${allUsers.length.toLocaleString('en-AU')} accounts, compared on three signals: the same phone number,
+        the same full name, and email addresses that differ only by a dot, a plus tag or a trailing digit.
+        Nothing is merged or deleted: this only reports what looks alike.
+      </p>
+      <div class="money-strip" style="margin-top:14px;">
+        <div class="money-box ${groups.length ? 'blocked' : 'payable'}">
+          <div class="mb-label">Possible duplicates</div>
+          <div class="mb-value">${total}</div>
+        </div>
+        <div class="money-box ${tests.length ? '' : 'payable'}">
+          <div class="mb-label">Looks like a test account</div>
+          <div class="mb-value">${tests.length}</div>
+        </div>
+      </div>
+    </div>
+
+    ${groups.length ? `<div class="detail-section"><h4>Accounts that look alike (${groups.length} groups)</h4>
+      ${groups.map(g => `
+        <div class="dup-card">
+          <div class="dup-head"><span class="dup-reason">${g.reason}</span><span class="dup-value">${esc(g.value)}</span></div>
+          <div class="dup-rows">${g.users.map(row).join('')}</div>
+        </div>`).join('')}
+    </div>` : ''}
+
+    ${tests.length ? `<div class="detail-section"><h4>Test accounts</h4>
+      <div class="dup-card"><div class="dup-rows">${tests.map(row).join('')}</div></div>
+    </div>` : ''}
+
+    ${!groups.length && !tests.length ? `<div class="detail-section">
+      <p style="font-size:13px;color:var(--green);font-weight:600;">Nothing found. No two accounts share a phone number, a name or a near-identical email, and none is named like a test.</p>
+    </div>` : ''}
+  `;
+  openPanel('Duplicate check', html);
+}
+
+function notesSection(u) {
+  const notes = Array.isArray(u.adminNotes) ? u.adminNotes.slice().reverse() : [];
+  const list = notes.length
+    ? `<div class="note-list">` + notes.map(n => `
+        <div class="note-item">
+          <div class="nt-text">${esc(n.text || '')}</div>
+          <div class="nt-meta">${n.at ? fmtDay(n.at) : ''}${n.by ? ' · ' + esc(n.by) : ''}</div>
+        </div>`).join('') + `</div>`
+    : '<p style="font-size:13px;color:var(--gray-400);margin-bottom:10px;">Nothing written yet</p>';
+
+  if (PRIVACY_MODE) {
+    return `<div class="detail-section"><h4>Notes</h4>${list}</div>`;
+  }
+  return `
+    <div class="detail-section">
+      <h4>Notes</h4>
+      ${list}
+      <textarea class="note-box" id="noteBox-${u.id}" placeholder="What happened, what you did, what to do next"></textarea>
+      <button class="panel-cta mail" style="margin-top:8px;" id="noteSave-${u.id}" onclick="addUserNote('${u.id}')">Save note</button>
+    </div>`;
+}
+
+async function addUserNote(uid) {
+  const box = document.getElementById('noteBox-' + uid);
+  const btn = document.getElementById('noteSave-' + uid);
+  const text = (box && box.value || '').trim();
+  if (!text) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  const note = { text, at: new Date().toISOString(), by: (auth.currentUser && auth.currentUser.email) || '' };
+  try {
+    await db.collection('users').doc(uid).update({
+      adminNotes: firebase.firestore.FieldValue.arrayUnion(note)
+    });
+    const u = usersMap[uid];
+    if (u) u.adminNotes = (u.adminNotes || []).concat([note]);
+    openUserPanel(uid);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save note'; }
+    alert('The note could not be saved: ' + e.message);
+  }
+}
+
 function openUserPanel(uid) {
   const u = usersMap[uid];
   if (!u) return;
 
-  // Find related data
-  const userTrips = allTrips.filter(t => getRefId(t.driverID) === uid);
-  const userPayments = allPayments.filter(p => getRefId(p.passengerId) === uid);
-  const userWalletTx = allWalletTx.filter(w => getRefId(w.userId) === uid);
+  const userTrips = allTrips.filter(t => (getRefId(t.driverID) || t.driverID) === uid);
+  const userPayments = allPayments.filter(p => (getRefId(p.passengerId) || p.passengerId) === uid);
+  const userWalletTx = allWalletTx.filter(w => (getRefId(w.userId) || w.userId) === uid);
+  const nat = natMap[getRefId(u.nationality) || u.nationality];
+  const bank = hasBank(u);
+  const balance = u.walletBalance || 0;
+  if (!LAST_ACTIVITY) buildActivityIndex();
+  const last = LAST_ACTIVITY[uid];
 
-  let html = `
+  const roles = userRoles(u);
+  const tags = (roles.length
+      ? roles.map(r => `<span class="role-tag role-${r}">${r === 'driver' ? 'Driver' : 'Passenger'}</span>`).join('')
+      : '<span class="role-tag role-none">No role</span>')
+    + (u.isRoorideStaff ? '<span class="role-tag" style="background:#E0E7FF;color:#3730A3">Staff</span>' : '')
+    + bannedBadge(uid);
+
+  const flag = nat
+    ? (nat.flag
+        ? `<span class="flag-dot" title="${nat.country}"><img src="${nat.flag}" alt="" onerror="this.parentElement.textContent='🌐'"></span>`
+        : `<span class="flag-dot" title="${nat.country}">🌐</span>`)
+    : '';
+
+  // What this person means in money, before anything else: what they are owed and
+  // whether it can leave the platform.
+  const moneyStrip = `
+    <div class="money-strip">
+      <div class="money-box ${balance > 0 ? (bank ? 'payable' : 'blocked') : ''}">
+        <div class="mb-label">Wallet balance</div>
+        <div class="mb-value">${fmtMoney(balance)}</div>
+      </div>
+      <div class="money-box">
+        <div class="mb-label">Paid as passenger</div>
+        <div class="mb-value">${fmtMoney(userPayments.reduce((n, p) => n + (Number(p.amount) || 0), 0))}</div>
+      </div>
+    </div>`;
+
+  const actions = PRIVACY_MODE ? '' : `
+    ${balance > 0 && bank ? `<button class="panel-cta pay" onclick="alert('Transfer ${fmtMoney(balance)} to ${String(displayName(u)).replace(/'/g, "")}, then record it as a bank transfer in the wallet.')">Pay ${fmtMoney(balance)} now</button>` : ''}
+    ${balance > 0 && !bank ? `<button class="panel-cta mail" onclick="window.location.href='mailto:${u.email}?subject=Your Rooride earnings are waiting'">Email for bank details</button>` : ''}
+  `;
+
+  // The file says where the identity stands, it does not decide it. A document waiting
+  // for a decision belongs to the verification queue, with the two buttons; here it is
+  // only visible once it has been approved.
+  const idSection = PRIVACY_MODE ? `
     <div class="detail-section">
-      <h4>Information</h4>
-      <div class="detail-row"><span class="dl">Name</span><span class="dv"><span class="user-cell" style="justify-content:flex-end;">${avatarHtml(u, 32)}<strong>${displayName(u)}</strong></span></span></div>
-      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</span></div>
+      <h4>Identity</h4>
+      <div style="background:var(--gray-100);border-radius:10px;padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">Hidden in the anonymised view</div>
+    </div>` : `
+    <div class="detail-section">
+      <h4>Identity</h4>
+      <div class="detail-row"><span class="dl">Status</span><span class="dv">${u.isVerified
+        ? '<span class="badge-status badge-green">Verified</span>'
+        : (u.idPhoto ? '<span class="badge-status badge-yellow">Pending review</span>' : '<span class="badge-status badge-red">No document</span>')}</span></div>
+      ${u.isVerified && u.idPhoto
+        ? `<button class="panel-cta mail" style="margin-top:10px;" onclick="window.open('${u.idPhoto}', '_blank')">See the identity document</button>`
+        : (u.idPhoto
+            ? `<p style="font-size:12.5px;color:var(--gray-400);margin-top:8px;">A document is waiting for a decision. It is reviewed in ID Verification, not here.</p>`
+            : '')}
+    </div>`;
+
+  const bankSection = PRIVACY_MODE ? '' : `
+    <div class="detail-section">
+      <h4>Bank details</h4>
+      ${bank ? `
+        <div class="detail-row"><span class="dl">Account holder</span><span class="dv">${u.bankDetails.accountHolderName || '—'}</span></div>
+        <div class="detail-row"><span class="dl">BSB</span><span class="dv mono">${u.bankDetails.BSBNumber || '—'}</span></div>
+        <div class="detail-row"><span class="dl">Account</span><span class="dv mono">${u.bankDetails.accountNumber || '—'}</span></div>`
+      : `<p style="font-size:13px;color:var(--red);">Not provided. Nothing can be transferred to this person.</p>`}
+    </div>`;
+
+  const list = (title, items, empty, row) => `
+    <div class="detail-section">
+      <h4>${title}</h4>
+      ${items.length ? items.slice(0, 10).map(row).join('') : `<p style="font-size:13px;color:var(--gray-400)">${empty}</p>`}
+      ${items.length > 10 ? `<p style="font-size:11.5px;color:var(--gray-400);text-align:center;margin-top:8px;">Showing 10 of ${items.length}</p>` : ''}
+    </div>`;
+
+  const html = `
+    <div class="profile-head">
+      <div class="avatar-wrap">${avatarHtml(u, 52)}${flag}</div>
+      <div style="min-width:0">
+        <div class="ph-name">${displayName(u)}</div>
+        <div class="ph-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+        <div class="ph-tags">${tags}</div>
+      </div>
+    </div>
+
+    ${moneyStrip}
+    ${actions}
+
+    <div class="detail-section">
+      <h4>Profile</h4>
       <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number) : (u.phone_number || '—')}</span></div>
-      <div class="detail-row"><span class="dl">UID</span><span class="dv mono" style="font-size:11px;">${u.id}</span></div>
-      <div class="detail-row"><span class="dl">Verified</span><span class="dv">${u.isVerified ? '✅ Yes' : '❌ No'}</span></div>
-      <div class="detail-row"><span class="dl">Staff</span><span class="dv">${u.isRoorideStaff ? '✅ Yes' : '❌ No'}</span></div>
-      ${isBanned(u.id) ? `<div class="detail-row"><span class="dl">Banned</span><span class="dv"><span class="badge-status badge-red">Yes</span> <span class="mono" style="font-size:11px;color:var(--gray-400);">${fmtDate(bannedMap[u.id].bannedAt)} · ${bannedMap[u.id].bannedBy || '—'}</span></span></div>` : ''}
-      <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
+      <div class="detail-row"><span class="dl">Nationality</span><span class="dv">${nat ? nat.country : '—'}</span></div>
+      <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDay(u.created_time)}</span></div>
+      <div class="detail-row"><span class="dl">Last activity</span><span class="dv mono">${last ? fmtDay(last) : '—'}</span></div>
+      <div class="detail-row"><span class="dl">Account ID</span><span class="dv mono" style="font-size:11px;">${uid}</span></div>
     </div>
 
-    <div class="detail-section">
-      <h4>💰 Wallet & Bank</h4>
-      <div class="detail-row"><span class="dl">Wallet Balance</span><span class="dv wallet-amount wallet-positive" style="font-size:18px;">${fmtMoney(u.walletBalance || 0)}</span></div>
-      ${PRIVACY_MODE ? `<div class="detail-row"><span class="dl">Bank details</span><span class="dv" style="color:var(--gray-400);">Hidden (privacy mode)</span></div>` : `
-      <div class="detail-row"><span class="dl">BSB</span><span class="dv mono">${u.bankDetails?.BSBNumber || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Account</span><span class="dv mono">${u.bankDetails?.accountNumber || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Account holder</span><span class="dv">${u.bankDetails?.accountHolderName || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Bank complete</span><span class="dv">${u.bankDetails?.isBankDetailsComplete ? '✅' : '❌'}</span></div>`}
-    </div>
+    ${notesSection(u)}
+    ${idSection}
+    ${bankSection}
 
-    <div class="detail-section">
-      <h4>🚗 Trips as driver (${userTrips.length})</h4>
-      ${userTrips.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No trips</p>' :
-        userTrips.slice(0, 10).map(t => `
-          <div class="detail-list-item" onclick="openTripPanel('${t.id}')">
-            <div class="dli-top"><span>${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}</span>${statusBadge(t.status)}</div>
-            <div class="dli-sub">${fmtDate(t.startTime)} · ${fmtMoney(t.pricePerSeat)}/seat · ${t.reservedSeats||0}/${t.totalSeats||'?'} seats</div>
-          </div>
-        `).join('')}
-    </div>
+    ${list('Trips published (' + userTrips.length + ')', userTrips, 'None', t => `
+      <div class="detail-list-item" onclick="openTripPanel('${t.id}')">
+        <div class="dli-top"><span>${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}</span>${statusBadge(t.status)}</div>
+        <div class="dli-sub">${fmtDay(t.startTime)} · ${fmtMoney(t.pricePerSeat)} a seat · ${t.reservedSeats || 0}/${t.totalSeats || '?'} seats</div>
+      </div>`)}
 
-    <div class="detail-section">
-      <h4>💳 Payments as passenger (${userPayments.length})</h4>
-      ${userPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No payments</p>' :
-        userPayments.slice(0, 10).map(p => `
-          <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
-            <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-            <div class="dli-sub">${fmtDate(p.paymentDate)} · Stripe: ${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</div>
-          </div>
-        `).join('')}
-    </div>
+    ${list('Bookings paid (' + userPayments.length + ')', userPayments, 'None', p => `
+      <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
+        <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
+        <div class="dli-sub">${fmtDay(p.paymentDate)} · ${p.startLocation?.city || '?'} to ${p.endLocation?.city || '?'}</div>
+      </div>`)}
 
-    <div class="detail-section">
-      <h4>🔄 Wallet Transactions (${userWalletTx.length})</h4>
-      ${userWalletTx.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No transactions</p>' :
-        userWalletTx.slice(0, 15).map(w => `
-          <div class="detail-list-item">
-            <div class="dli-top"><span class="wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
-            <div class="dli-sub">${fmtDate(w.transactionDate)} · ${w.description || '—'}</div>
-          </div>
-        `).join('')}
-    </div>
+    ${list('Wallet history (' + userWalletTx.length + ')', userWalletTx, 'No movement', w => `
+      <div class="detail-list-item">
+        <div class="dli-top"><span class="wallet-amount ${(w.amount || 0) >= 0 ? 'wallet-positive' : 'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
+        <div class="dli-sub">${fmtDay(w.transactionDate)} · ${w.description || '—'}</div>
+      </div>`)}
   `;
   openPanel(getUserName(uid), html);
 }
@@ -1421,186 +2929,159 @@ function openTripPanel(tripId) {
   const t = allTrips.find(x => x.id === tripId);
   if (!t) return;
 
-  const driverId = getRefId(t.driverID);
-  const tripPayments = allPayments.filter(p => getRefId(p.tripId) === tripId);
-  const tripCommissions = allCommissions.filter(c => getRefId(c.tripId) === tripId);
+  const driverId = getRefId(t.driverID) || t.driverID;
+  const tripPayments = allPayments.filter(p => (getRefId(p.tripId) || p.tripId) === tripId);
 
-  // Payout. Gross and net differ once a payment is refunded: the money came in and went back
-  // out, so it feeds neither the commission nor what the driver is owed. The commission comes
-  // from the booked record and the driver's side from the wallet ledger, so this panel reports
-  // what happened instead of recomputing 15% of everything that ever landed.
-  const totalReceived = tripPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
-  const totalRefunded = +tripPayments.reduce((s, p) => s + paymentRefundedAmount(p), 0).toFixed(2);
+  // Gross and net differ once a payment is refunded: the money came in and went back out,
+  // so it feeds neither the commission nor what the driver is owed. The commission is read
+  // from the booked record and the driver's side from the wallet ledger, so this reports
+  // what happened rather than recomputing a percentage of everything that ever landed.
+  const totalReceived = tripPayments.reduce((n, p) => n + (Number(p.amount) || 0), 0);
+  const totalRefunded = +tripPayments.reduce((n, p) => n + paymentRefundedAmount(p), 0).toFixed(2);
   const netReceived = +(totalReceived - totalRefunded).toFixed(2);
   const commission = tripCommission(tripId);
   const credited = tripDriverCredit(tripId, driverId);
   const driverPayout = credited.amount != null ? credited.amount : +(netReceived - commission.amount).toFixed(2);
 
-  let html = `
+  const html = panelHead(
+      panelIcon('<path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+      `${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}`,
+      `${fmtDay(t.startTime)} · ${fmtMoney(t.pricePerSeat)} a seat`,
+      statusBadge(t.status)
+    ) + moneyStrip([
+      { label: 'Paid by passengers', value: fmtMoney(netReceived) },
+      { label: credited.amount != null ? 'Credited to the driver' : 'To pay the driver',
+        value: fmtMoney(driverPayout), tone: driverPayout > 0 ? 'payable' : '' },
+    ]) + `
     <div class="detail-section">
-      <h4>🗺️ Trip</h4>
-      <div class="detail-row"><span class="dl">From</span><span class="dv">${t.startLocation?.city || '—'}</span></div>
-      <div class="detail-row"><span class="dl">To</span><span class="dv">${t.endLocation?.city || '—'}</span></div>
+      <h4>Driver</h4>
+      ${personRow(driverId, 'driver')}
+    </div>
+
+    <div class="detail-section">
+      <h4>The trip</h4>
       <div class="detail-row"><span class="dl">Departure</span><span class="dv mono">${fmtDate(t.startTime)}</span></div>
       <div class="detail-row"><span class="dl">Arrival</span><span class="dv mono">${fmtDate(t.endTime)}</span></div>
-      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(t.status)}</span></div>
-      <div class="detail-row"><span class="dl">Description</span><span class="dv">${t.description || '—'}</span></div>
+      <div class="detail-row"><span class="dl">Seats</span><span class="dv">${t.reservedSeats || 0} taken of ${t.totalSeats || '?'}</span></div>
+      <div class="detail-row"><span class="dl">Price a seat</span><span class="dv mono">${fmtMoney(t.pricePerSeat)}</span></div>
+      ${t.description ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span class="dl">Description</span>
+        <span class="dv" style="text-align:left;max-width:100%;font-weight:400;">${t.description}</span></div>` : ''}
     </div>
 
     <div class="detail-section">
-      <h4>🪑 Seats & Price</h4>
-      <div class="detail-row"><span class="dl">Price / seat</span><span class="dv mono">${fmtMoney(t.pricePerSeat)}</span></div>
-      <div class="detail-row"><span class="dl">Displayed total</span><span class="dv mono">${fmtMoney(t.totalPassengerTripPrice)}</span></div>
-      <div class="detail-row"><span class="dl">Total seats</span><span class="dv">${t.totalSeats || '—'}</span></div>
-      <div class="detail-row"><span class="dl">Reserved seats</span><span class="dv">${t.reservedSeats || 0}</span></div>
-      <div class="detail-row"><span class="dl">Available seats</span><span class="dv">${t.availableSeats ?? '—'}</span></div>
-    </div>
-
-    <div class="detail-section">
-      <h4>👤 Driver</h4>
-      <div class="detail-list-item" onclick="openUserPanel('${driverId}')">
-        <div class="dli-top"><span>${getUserName(t.driverID)}</span></div>
-        <div class="dli-sub">${getUserEmail(t.driverID)} · Click to view profile</div>
-      </div>
-    </div>
-
-    <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
-      <h4 style="border:none;color:var(--orange);">💸 Driver payout calculation</h4>
-      <div class="detail-row"><span class="dl">Total payments received</span><span class="dv mono">${fmtMoney(totalReceived)}</span></div>
-      ${totalRefunded ? `<div class="detail-row"><span class="dl">Refunded to passengers</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(totalRefunded)}</span></div>
-      <div class="detail-row"><span class="dl">Net received</span><span class="dv mono">${fmtMoney(netReceived)}</span></div>` : ''}
-      <div class="detail-row"><span class="dl">Commission ${COMMISSION_RATE * 100}%${estMark(commission.source)}</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(commission.amount)}</span></div>
-      <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
-        <span class="dl" style="font-weight:700;color:var(--dark);">${credited.amount != null ? 'Credited to the driver' : 'To pay the driver'}</span>
-        <span class="dv mono" style="font-size:22px;color:var(--orange);font-weight:700;">${fmtMoney(driverPayout)}</span>
+      <h4>How the money splits</h4>
+      <div class="detail-row"><span class="dl">Received</span><span class="dv mono">${fmtMoney(totalReceived)}</span></div>
+      ${totalRefunded ? `<div class="detail-row"><span class="dl">Refunded</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(totalRefunded)}</span></div>` : ''}
+      <div class="detail-row"><span class="dl">Rooride keeps${estMark(commission.source)}</span><span class="dv mono">${fmtMoney(commission.amount)}</span></div>
+      <div class="detail-row" style="padding-top:11px;border-top:1px solid var(--gray-200);">
+        <span class="dl" style="font-weight:700;color:var(--dark);">Driver</span>
+        <span class="dv mono" style="font-size:17px;color:var(--orange);font-weight:700;">${fmtMoney(driverPayout)}</span>
       </div>
     </div>
 
     <div class="detail-section">
-      <h4>💳 Linked payments (${tripPayments.length})</h4>
-      ${tripPayments.length === 0 ? '<p style="font-size:13px;color:var(--gray-400)">No payments</p>' :
-        tripPayments.map(p => `
-          <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
-            <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-            <div class="dli-sub">${getUserName(p.passengerId)} · Stripe: ${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</div>
-          </div>
-        `).join('')}
-    </div>
-
-    ${tripCommissions.length > 0 ? `
-    <div class="detail-section">
-      <h4>📊 Commission Records</h4>
-      ${tripCommissions.map(c => `
-        <div class="detail-row"><span class="dl">Commission amount</span><span class="dv mono">${fmtMoney(c.amount)}</span></div>
-        <div class="detail-row"><span class="dl">Commission %</span><span class="dv">${c.commissionPercentage || '—'}%</span></div>
-        <div class="detail-row"><span class="dl">Trip total price</span><span class="dv mono">${fmtMoney(c.tripTotalPrice)}</span></div>
-        <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(c.commissionDate)}</span></div>
-      `).join('')}
-    </div>` : ''}
-  `;
-  openPanel(`${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}`, html);
+      <h4>Bookings (${tripPayments.length})</h4>
+      ${tripPayments.length ? tripPayments.map(p => `
+        <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
+          <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
+          <div class="dli-sub">${getUserName(p.passengerId)} · ${fmtDay(p.paymentDate)}</div>
+        </div>`).join('') : '<p style="font-size:13px;color:var(--gray-400)">Nobody booked this trip</p>'}
+    </div>`;
+  openPanel('Trip', html);
 }
 
 function openPaymentPanel(paymentId) {
   const p = allPayments.find(x => x.id === paymentId);
   if (!p) return;
 
-  const passengerId = getRefId(p.passengerId);
-  const tripId = getRefId(p.tripId);
+  const tripId = getRefId(p.tripId) || p.tripId;
   const trip = allTrips.find(t => t.id === tripId);
   const b = paymentBreakdown(p);
+  const refunded = isRefundedPayment(p.paymentStatus);
 
-  let html = `
+  const html = panelHead(
+      panelIcon('<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>', refunded ? 'grey' : 'green'),
+      fmtMoney(p.amount),
+      `${fmtDay(p.paymentDate)}${p.promoCodeUsed ? ' · promo ' + p.promoCodeUsed : ''}`,
+      statusBadge(p.paymentStatus)
+    ) + (b.tripPrice === null ? '' : moneyStrip([
+      { label: 'Rooride keeps', value: fmtMoney(b.commission + BOOKING_FEE_AUD) },
+      { label: 'Driver share', value: fmtMoney(b.driverShare), tone: 'payable' },
+    ])) + `
     <div class="detail-section">
-      <h4>💳 Payment</h4>
-      <div class="detail-row"><span class="dl">Amount</span><span class="dv mono" style="font-size:22px;font-weight:700">${fmtMoney(p.amount)}</span></div>
-      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(p.paymentStatus)}</span></div>
-      <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(p.paymentDate)}</span></div>
-      <div class="detail-row"><span class="dl">Stripe ID</span><span class="dv mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</span></div>
-      <div class="detail-row"><span class="dl">Discount</span><span class="dv mono">${p.discountAmount ? fmtMoney(p.discountAmount) : '—'}</span></div>
-      <div class="detail-row"><span class="dl">Promo code</span><span class="dv">${p.promoCodeUsed || '—'}</span></div>
-    </div>
-
-    <div class="detail-section">
-      <h4>👤 Passenger</h4>
-      <div class="detail-list-item" onclick="openUserPanel('${passengerId}')">
-        <div class="dli-top"><span>${getUserName(p.passengerId)}</span></div>
-        <div class="dli-sub">${getUserEmail(p.passengerId)} · Click to view profile</div>
-      </div>
+      <h4>Passenger</h4>
+      ${personRow(p.passengerId, 'passenger')}
     </div>
 
     ${trip ? `
     <div class="detail-section">
-      <h4>🚗 Associated trip</h4>
+      <h4>Trip</h4>
       <div class="detail-list-item" onclick="openTripPanel('${trip.id}')">
-        <div class="dli-top"><span>${trip.startLocation?.city || '?'} → ${trip.endLocation?.city || '?'}</span>${statusBadge(trip.status)}</div>
-        <div class="dli-sub">Driver: ${getUserName(trip.driverID)} · ${fmtDate(trip.startTime)}</div>
+        <div class="dli-top"><span>${trip.startLocation?.city || '?'} to ${trip.endLocation?.city || '?'}</span>${statusBadge(trip.status)}</div>
+        <div class="dli-sub">${getUserName(trip.driverID)} · ${fmtDay(trip.startTime)}</div>
       </div>
     </div>` : ''}
 
-    <div class="detail-section" style="background:var(--orange-light);border-radius:12px;padding:20px;">
-      <h4 style="border:none;color:var(--orange);">💸 Breakdown</h4>
-      <div class="detail-row"><span class="dl">Amount paid</span><span class="dv mono">${fmtMoney(p.amount)}</span></div>
+    <div class="detail-section">
+      <h4>How this payment splits</h4>
       ${b.tripPrice === null ? `
-      <div class="detail-row"><span class="dl">Breakdown</span><span class="dv" style="color:var(--gray-400);font-size:13px;">Not applicable — payment refunded</span></div>` : `
-      <div class="detail-row"><span class="dl">Incl. booking fee ($${BOOKING_FEE_AUD})</span><span class="dv mono">${fmtMoney(BOOKING_FEE_AUD)}</span></div>
-      <div class="detail-row"><span class="dl">Trip price (excl. fees)</span><span class="dv mono">${fmtMoney(b.tripPrice)}</span></div>
-      <div class="detail-row"><span class="dl">Commission ${COMMISSION_RATE * 100}%</span><span class="dv mono" style="color:var(--red);">− ${fmtMoney(b.commission)}</span></div>
-      <div class="detail-row" style="padding-top:12px;border-top:2px solid var(--orange-mid);">
-        <span class="dl" style="font-weight:700;">Driver share</span>
-        <span class="dv mono" style="font-size:18px;color:var(--orange);font-weight:700;">${fmtMoney(b.driverShare)}${warnMark(b.warning)}</span>
-      </div>`}
+        <p style="font-size:13px;color:var(--gray-400)">This payment was refunded, so nothing was kept and nothing is owed to the driver.</p>` : `
+        <div class="detail-row"><span class="dl">Booking fee, kept in full</span><span class="dv mono">${fmtMoney(BOOKING_FEE_AUD)}</span></div>
+        <div class="detail-row"><span class="dl">Trip price</span><span class="dv mono">${fmtMoney(b.tripPrice)}</span></div>
+        <div class="detail-row"><span class="dl">Commission on the driver, ${COMMISSION_RATE * 100}%</span><span class="dv mono">${fmtMoney(b.commission)}</span></div>
+        <div class="detail-row" style="padding-top:11px;border-top:1px solid var(--gray-200);">
+          <span class="dl" style="font-weight:700;color:var(--dark);">Driver share</span>
+          <span class="dv mono" style="font-size:17px;color:var(--orange);font-weight:700;">${fmtMoney(b.driverShare)}${warnMark(b.warning)}</span>
+        </div>`}
     </div>
-  `;
-  openPanel('Payment ' + (PRIVACY_MODE ? p.id.substring(0, 8) : (p.stripePaymentId || p.id.substring(0, 8))), html);
+
+    <div class="detail-section">
+      <h4>Reference</h4>
+      <div class="detail-row"><span class="dl">Stripe</span><span class="dv mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</span></div>
+      ${p.discountAmount ? `<div class="detail-row"><span class="dl">Discount</span><span class="dv mono">${fmtMoney(p.discountAmount)}</span></div>` : ''}
+      <div class="detail-row"><span class="dl">Taken on</span><span class="dv mono">${fmtDate(p.paymentDate)}</span></div>
+    </div>`;
+  openPanel('Booking', html);
 }
 
 function openWalletTxPanel(txId) {
   const w = allWalletTx.find(x => x.id === txId);
   if (!w) return;
-  const userId = getRefId(w.userId);
+  const amount = Number(w.amount) || 0;
+  const type = (w.transactionType || '').toLowerCase();
+  const what = type.includes('tripearning') ? 'Earned on a completed trip'
+             : type.includes('banktransfer') ? 'Paid out to the driver'
+             : type.includes('refundreversal') ? 'Taken back after a refund to the passenger'
+             : 'Wallet movement';
 
-  let html = `
+  const html = panelHead(
+      panelIcon('<path d="M3 7h13a2 2 0 0 1 2 2v1"/><path d="M21 12v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11"/><circle cx="17" cy="13" r="1.6"/>',
+                amount >= 0 ? 'green' : 'grey'),
+      fmtMoney(amount),
+      what,
+      statusBadge(w.transactionType)
+    ) + `
     <div class="detail-section">
-      <h4>🔄 Wallet Transaction</h4>
-      <div class="detail-row"><span class="dl">Amount</span><span class="dv mono wallet-amount ${w.transactionType==='credit'?'wallet-positive':'wallet-negative'}" style="font-size:22px;">${fmtMoney(w.amount)}</span></div>
-      <div class="detail-row"><span class="dl">Type</span><span class="dv">${statusBadge(w.transactionType)}</span></div>
-      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(w.status)}</span></div>
+      <h4>Driver</h4>
+      ${personRow(w.userId)}
+    </div>
+
+    <div class="detail-section">
+      <h4>Entry</h4>
       <div class="detail-row"><span class="dl">Date</span><span class="dv mono">${fmtDate(w.transactionDate)}</span></div>
-      <div class="detail-row"><span class="dl">Description</span><span class="dv">${w.description || '—'}</span></div>
-    </div>
-
-    <div class="detail-section">
-      <h4>👤 User</h4>
-      <div class="detail-list-item" onclick="openUserPanel('${userId}')">
-        <div class="dli-top"><span>${getUserName(w.userId)}</span></div>
-        <div class="dli-sub">${getUserEmail(w.userId)} · Click to view profile</div>
-      </div>
-    </div>
-  `;
-  openPanel('Wallet Transaction', html);
+      ${w.status ? `<div class="detail-row"><span class="dl">Status</span><span class="dv">${statusBadge(w.status)}</span></div>` : ''}
+      ${w.description ? `<div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <span class="dl">Description</span>
+        <span class="dv" style="text-align:left;max-width:100%;font-weight:400;">${w.description}</span></div>` : ''}
+    </div>`;
+  openPanel('Wallet entry', html);
 }
 
 // ── Verification ──
 let verifFilter = 'pending';
 
 function renderVerificationPage() {
-  const pending = allUsers.filter(u => u.idPhoto && !u.isVerified);
-  const verified = allUsers.filter(u => u.isVerified);
-  const noDoc = allUsers.filter(u => !u.idPhoto && !u.isVerified);
-  const total = allUsers.length;
-
-  document.getElementById('verifStatPending').textContent = pending.length;
-  document.getElementById('verifStatVerified').textContent = verified.length;
-  document.getElementById('verifStatNone').textContent = noDoc.length;
-  document.getElementById('verifStatRate').innerHTML = (total ? Math.round(verified.length / total * 100) : 0) + '<span style="font-size:16px;font-weight:400">%</span>';
-
-  if (DD_MODE) {
-    const host = document.getElementById('verifStatPending').closest('.stat-row');
-    if (host && !document.getElementById('verifDDNote')) {
-      host.insertAdjacentHTML('afterend', '<p class="dd-note" id="verifDDNote">Identity documents are excluded from the anonymised dataset, so no document previews or approval actions are available here. The counts above are real.</p>');
-    }
-  }
   renderVerifTable(verifFilter);
 }
 
@@ -1618,105 +3099,148 @@ function renderVerifTable(type) {
   else users = allUsers.filter(u => u.idPhoto || u.isVerified);
 
   const tbody = document.getElementById('verifTableBody');
+  if (!tbody) return;
+  // An empty list and a list that has not arrived yet are not the same thing, and saying
+  // "nothing here" while the accounts are still loading is simply false.
+  if (!allUsers.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading"><span class="spinner"></span> Loading...</td></tr>';
+    return;
+  }
   if (!users.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty"><p>No cases in this category</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="empty"><p>Nothing in this list</p></td></tr>';
     return;
   }
 
+  // No document is shown in the list: a decision is taken with the document open, one
+  // person at a time, not from a row of thumbnails.
   tbody.innerHTML = users.map(u => {
-    const name = PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—');
-    const hasDoc = !!u.idPhoto;
-    const statusHtml = u.isVerified
-      ? '<span class="badge-status badge-green">Verified ✓</span>'
-      : hasDoc
-        ? '<span class="badge-status badge-yellow">Pending</span>'
-        : '<span class="badge-status badge-gray">No document</span>';
-
-    const thumbHtml = PRIVACY_MODE
-      ? '<span style="color:var(--gray-400);font-size:12px;">🔒</span>'
-      : hasDoc
-        ? `<img src="${u.idPhoto}" alt="ID" style="height:36px;width:54px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);cursor:pointer;" onerror="this.outerHTML='<span style=\\'color:var(--red);font-size:12px\\'>Image error</span>'">`
-        : '<span style="color:var(--gray-300);font-size:12px;">—</span>';
-
-    const actionHtml = PRIVACY_MODE
-      ? '—'
-      : !u.isVerified && hasDoc
-        ? `<button class="filter-btn" style="background:var(--green-bg);border-color:var(--green);color:var(--green);" onclick="event.stopPropagation();approveUser('${u.id}')">Approve ✓</button>`
-        : u.isVerified
-          ? '<span style="color:var(--green);font-size:12px;font-weight:600;">✓ Approved</span>'
-          : '—';
-
+    const nat = natMap[getRefId(u.nationality) || u.nationality];
+    const flag = nat
+      ? (nat.flag
+          ? `<span class="flag-dot" title="${nat.country}"><img src="${nat.flag}" alt="" onerror="this.parentElement.textContent='🌐'"></span>`
+          : `<span class="flag-dot" title="${nat.country}">🌐</span>`)
+      : '';
+    const status = u.isVerified
+      ? '<span class="badge-status badge-green">Verified</span>'
+      : (u.idPhoto ? '<span class="badge-status badge-yellow">Pending</span>' : '<span class="badge-status badge-red">No document</span>');
+    const action = u.idPhoto
+      ? `<button class="filter-btn" onclick="event.stopPropagation();openVerificationPanel('${u.id}')">See the document</button>`
+      : '<span style="color:var(--gray-300);font-size:12px;">Nothing to see</span>';
     return `
       <tr onclick="openVerificationPanel('${u.id}')">
-        <td><div class="user-cell">${avatarHtml(u)}<strong>${name}</strong></div></td>
-        <td class="mono" style="font-size:12px;">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</td>
-        <td>${thumbHtml}</td>
-        <td class="mono">${fmtDate(u.created_time)}</td>
-        <td>${statusHtml}</td>
-        <td>${actionHtml}</td>
+        <td>
+          <div class="user-cell">
+            <div class="avatar-wrap">${avatarHtml(u, 34)}${flag}</div>
+            <div class="user-lines">
+              <div class="user-name">${displayName(u)}${bannedBadge(u.id)}</div>
+              <div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+            </div>
+          </div>
+        </td>
+        <td class="mono">${fmtDay(u.created_time)}</td>
+        <td>${status}</td>
+        <td style="text-align:right">${action}</td>
       </tr>`;
   }).join('');
 }
 
+
+// Zoom, pan and rotate, inside the card. Opening the document in another tab would
+// leave the name and the two buttons behind, which is the whole point of the screen.
+let DOC_ZOOM = 1, DOC_ROT = 0, DOC_X = 0, DOC_Y = 0;
+
+function docApply() {
+  const img = document.getElementById('docImg');
+  const wrap = document.getElementById('docWrap');
+  const level = document.getElementById('docZoomLevel');
+  if (!img) return;
+  img.style.transform = `translate(${DOC_X}px, ${DOC_Y}px) scale(${DOC_ZOOM}) rotate(${DOC_ROT}deg)`;
+  if (wrap) wrap.classList.toggle('zoomed', DOC_ZOOM > 1);
+  if (level) level.textContent = Math.round(DOC_ZOOM * 100) + '%';
+}
+function docZoom(step) {
+  DOC_ZOOM = Math.min(6, Math.max(0.5, +(DOC_ZOOM + step).toFixed(2)));
+  if (DOC_ZOOM <= 1) { DOC_X = 0; DOC_Y = 0; }
+  docApply();
+}
+function docRotate() { DOC_ROT = (DOC_ROT + 90) % 360; docApply(); }
+function docReset() { DOC_ZOOM = 1; DOC_ROT = 0; DOC_X = 0; DOC_Y = 0; docApply(); }
+
+function docGrab(e) {
+  if (DOC_ZOOM <= 1) return;
+  e.preventDefault();
+  const x0 = e.clientX - DOC_X, y0 = e.clientY - DOC_Y;
+  const move = ev => { DOC_X = ev.clientX - x0; DOC_Y = ev.clientY - y0; docApply(); };
+  const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
 function openVerificationPanel(uid) {
+  DOC_ZOOM = 1; DOC_ROT = 0; DOC_X = 0; DOC_Y = 0;
   const u = usersMap[uid];
   if (!u) return;
-  const name = PRIVACY_MODE ? pseudoName(uid) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email || uid);
+  const name = displayName(u);
+  const nat = natMap[getRefId(u.nationality) || u.nationality];
+  const flag = nat
+    ? (nat.flag
+        ? `<span class="flag-dot" title="${nat.country}"><img src="${nat.flag}" alt="" onerror="this.parentElement.textContent='🌐'"></span>`
+        : `<span class="flag-dot" title="${nat.country}">🌐</span>`)
+    : '';
 
-  const statusHtml = u.isVerified
-    ? '<span class="badge-status badge-green" style="font-size:13px;">✓ Verified</span>'
+  // The queue, so a decision leads straight to the next case instead of back to a list.
+  const queue = allUsers.filter(x => x.idPhoto && !x.isVerified);
+  const pos = queue.findIndex(x => x.id === uid);
+  const next = pos >= 0 ? (queue[pos + 1] || queue[0]) : queue[0];
+
+  const doc = PRIVACY_MODE
+    ? `<div class="verify-photo-wrap" style="cursor:default;">
+         <span style="color:var(--gray-400);font-size:13px;">Identity documents are not part of the anonymised view</span></div>`
     : u.idPhoto
-      ? '<span class="badge-status badge-yellow" style="font-size:13px;">Pending review</span>'
-      : '<span class="badge-status badge-gray" style="font-size:13px;">No document submitted</span>';
+      ? `<div class="verify-photo-wrap" id="docWrap" onmousedown="docGrab(event)">
+           <div class="doc-loading" id="docLoading-${uid}"><span class="spinner"></span> Loading the document</div>
+           <img id="docImg" src="${u.idPhoto}" alt="Identity document"
+                onload="this.classList.add('ready'); const l=document.getElementById('docLoading-${uid}'); if(l) l.classList.add('gone');"
+                onerror="const l=document.getElementById('docLoading-${uid}'); if(l) l.innerHTML='<span style=\'color:var(--red)\'>The document could not be loaded</span>';">
+         </div>
+         <div class="doc-tools">
+           <button class="doc-tool" onclick="docZoom(-0.25)" title="Zoom out">−</button>
+           <span class="doc-zoom-level" id="docZoomLevel">100%</span>
+           <button class="doc-tool" onclick="docZoom(0.25)" title="Zoom in">+</button>
+           <button class="doc-tool" onclick="docRotate()" title="Rotate">↻</button>
+           <button class="doc-tool wide" onclick="docReset()">Reset</button>
+         </div>`
+      : `<div class="verify-photo-wrap" style="cursor:default;">
+           <span style="color:var(--gray-400);font-size:13px;">No document has been submitted</span></div>`;
 
-  const photoSection = PRIVACY_MODE ? `
-    <div class="detail-section">
-      <h4>📄 ID document</h4>
-      <div style="background:var(--gray-100);border-radius:10px;padding:32px;text-align:center;color:var(--gray-400);font-size:13px;">
-        🔒 Hidden (privacy mode)
-      </div>
-    </div>` : u.idPhoto ? `
-    <div class="detail-section">
-      <h4>📄 ID document</h4>
-      <div class="verify-photo-wrap" onclick="window.open('${u.idPhoto}', '_blank')">
-        <img src="${u.idPhoto}" alt="ID document" onerror="this.parentElement.innerHTML='<p style=\\'padding:24px;color:var(--red);font-size:13px;\\'>Could not load image</p>'">
-      </div>
-      <p style="font-size:11px;color:var(--gray-400);text-align:center;margin-top:-8px;margin-bottom:16px;">Click to open full screen</p>
-    </div>` : `
-    <div class="detail-section">
-      <h4>📄 ID document</h4>
-      <div style="background:var(--gray-100);border-radius:10px;padding:32px;text-align:center;color:var(--gray-400);font-size:13px;">
-        No document submitted
-      </div>
-    </div>`;
-
-  const actionsSection = !PRIVACY_MODE && !u.isVerified && u.idPhoto ? `
-    <div class="detail-section">
-      <h4>Actions</h4>
-      <button class="btn-approve" id="btnApprove-${uid}" onclick="approveUser('${uid}')">✓ Approve document</button>
-      <button class="btn-reject" id="btnReject-${uid}" onclick="rejectIdPhoto('${uid}')">✗ Reject document</button>
-      <p style="font-size:11px;color:var(--gray-400);margin-top:8px;text-align:center;">Rejecting deletes the document and notifies the user to resubmit</p>
-    </div>` : u.isVerified ? `
-    <div class="detail-section">
-      <div style="background:var(--green-bg);border-radius:10px;padding:16px;text-align:center;color:var(--green);font-weight:600;">
-        ✓ User verified
-      </div>
-    </div>` : '';
+  const actions = (!PRIVACY_MODE && u.idPhoto && !u.isVerified)
+    ? `<button class="btn-approve" id="btnApprove-${uid}" onclick="approveUser('${uid}')">The document matches, approve</button>
+       <button class="btn-reject" id="btnReject-${uid}" onclick="rejectIdPhoto('${uid}')">Reject the document</button>
+       <p style="font-size:11px;color:var(--gray-400);margin-top:8px;text-align:center;">Rejecting deletes the document so the person can send another</p>
+       ${next && next.id !== uid ? `<p class="verify-queue">${queue.length} waiting · <a onclick="openVerificationPanel('${next.id}')" style="color:var(--orange);cursor:pointer;text-decoration:underline;">Skip to the next one</a></p>` : ''}`
+    : u.isVerified
+      ? `<div style="background:var(--green-bg);border-radius:10px;padding:15px;text-align:center;color:var(--green);font-weight:700;">Verified</div>`
+      : '';
 
   const html = `
-    <div class="detail-section">
-      <h4>Information</h4>
-      <div class="detail-row"><span class="dl">Name</span><span class="dv">${name}</span></div>
-      <div class="detail-row"><span class="dl">Email</span><span class="dv mono">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</span></div>
-      <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number) : (u.phone_number || '—')}</span></div>
-      <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDate(u.created_time)}</span></div>
-      <div class="detail-row"><span class="dl">Status</span><span class="dv">${statusHtml}</span></div>
+    <div class="verify-head">
+      <div class="avatar-wrap">${avatarHtml(u, 54)}${flag}</div>
+      <div style="min-width:0">
+        <div class="vh-name">${name}</div>
+        <div class="vh-sub">${nat ? nat.country + ' · ' : ''}joined ${fmtDay(u.created_time)}</div>
+      </div>
     </div>
-    ${photoSection}
-    ${actionsSection}
-  `;
-  openPanel('Verification — ' + name, html);
+
+    ${doc}
+    ${actions}
+
+    <div class="detail-section" style="margin-top:22px;">
+      <h4>The account</h4>
+      ${personRow(uid)}
+    </div>`;
+  openPanel('Identity check', html);
 }
+
 
 async function approveUser(uid) {
   const btnApprove = document.getElementById('btnApprove-' + uid);
@@ -1734,10 +3258,15 @@ async function approveUser(uid) {
       btnApprove.style.background = '#16a34a';
     }
     setTimeout(() => {
-      closePanel();
       renderVerificationPage();
-      updateVerifBadge();
-    }, 700);
+      applyUserView();
+      // The queue on the Overview counts the same cases: it has to follow the decision.
+      renderOverviewTodo();
+      // Straight to the next case, so a queue of nine is nine decisions and not nine trips
+      // back to the list.
+      const next = allUsers.find(x => x.idPhoto && !x.isVerified);
+      if (next) openVerificationPanel(next.id); else closePanel();
+    }, 600);
   } catch (err) {
     alert('Error while updating: ' + err.message);
     if (btnApprove) { btnApprove.disabled = false; btnApprove.textContent = '✓ Approve document'; }
@@ -1757,9 +3286,12 @@ async function rejectIdPhoto(uid) {
     const u = usersMap[uid];
     if (u) u.idPhoto = null;
     setTimeout(() => {
-      closePanel();
       renderVerificationPage();
-      updateVerifBadge();
+      applyUserView();
+      // The queue on the Overview counts the same cases: it has to follow the decision.
+      renderOverviewTodo();
+      const next = allUsers.find(x => x.idPhoto && !x.isVerified);
+      if (next) openVerificationPanel(next.id); else closePanel();
     }, 300);
   } catch (err) {
     alert('Error: ' + err.message);
@@ -1768,249 +3300,8 @@ async function rejectIdPhoto(uid) {
   }
 }
 
-// ── Stats ──
-function renderStatsPage() {
-  const container = document.getElementById('statsContent');
-
-  // ── KPI ──
-  const totalUsers = allUsers.length;
-  const verifiedUsers = allUsers.filter(u => u.isVerified).length;
-  const bankComplete = allUsers.filter(u => u.bankDetails?.isBankDetailsComplete).length;
-  // `processed` is the status the app writes (PaymentStatus.processed) and `refunded` the one the
-  // reconciliation scripts write. The previous substring test looked for paid/success/completed,
-  // matched neither, and silently reported $0 of revenue. Refunds are netted off instead.
-  const totalRevenue = +allPayments.reduce((s, p) => s + paymentNetAmount(p), 0).toFixed(2);
-  const totalRefundedAll = +allPayments.reduce((s, p) => s + paymentRefundedAmount(p), 0).toFixed(2);
-  // Commission as booked in appCommissionRecords, not a percentage of revenue: the two are not
-  // the same number, because booking fees sit outside the commission base and a refund zeroes
-  // the record.
-  const totalCommission = +allCommissions.reduce((s, c) => s + (Number(c.amount) || 0), 0).toFixed(2);
-
-  // ── Nationality breakdown ──
-  // The user's nationality field can be a DocumentReference, a string (doc id), or a country string
-  const natCounts = {};
-  allUsers.forEach(u => {
-    if (!u.nationality) return;
-    const natId = getRefId(u.nationality) || u.nationality;
-    natCounts[natId] = (natCounts[natId] || 0) + 1;
-  });
-
-  // Build sorted list with country name lookup
-  const natEntries = Object.entries(natCounts).map(([key, count]) => {
-    const nat = natMap[key];
-    return {
-      key,
-      country: nat ? nat.country : key,
-      flag: nat ? nat.flag : null,
-      count
-    };
-  }).sort((a, b) => b.count - a.count);
-
-  const maxNatCount = natEntries[0]?.count || 1;
-  const usersWithNat = natEntries.reduce((s, e) => s + e.count, 0);
-  const noNatCount = totalUsers - usersWithNat;
-
-  // ── Trip status breakdown ──
-  const tripStatuses = {};
-  allTrips.forEach(t => {
-    const s = t.status || 'unknown';
-    tripStatuses[s] = (tripStatuses[s] || 0) + 1;
-  });
-  const tripStatusEntries = Object.entries(tripStatuses).sort((a, b) => b[1] - a[1]);
-
-  // ── Driver vs passenger ──
-  const driverUids = new Set(allTrips.map(t => getRefId(t.driverID)).filter(Boolean));
-  const passengerUids = new Set(allPayments.map(p => getRefId(p.passengerId)).filter(Boolean));
-  const driverCount = allUsers.filter(u => driverUids.has(u.id)).length;
-  const passengerCount = allUsers.filter(u => passengerUids.has(u.id)).length;
-  const bothCount = allUsers.filter(u => driverUids.has(u.id) && passengerUids.has(u.id)).length;
-  const neitherCount = allUsers.filter(u => !driverUids.has(u.id) && !passengerUids.has(u.id)).length;
-
-  // ── Wallet ──
-  const totalWalletCirculation = allUsers.reduce((s, u) => s + (u.walletBalance > 0 ? u.walletBalance : 0), 0);
-
-  const statusColors = { completed: '#22C55E', confirmed: '#22C55E', active: '#22C55E', cancelled: '#EF4444', canceled: '#EF4444', pending: '#F59E0B', nopassengers: '#8A8A8A' };
-  function getStatusColor(s) {
-    const lower = (s || '').toLowerCase().replace(/\s/g, '');
-    for (const [k, v] of Object.entries(statusColors)) { if (lower.includes(k)) return v; }
-    return '#3B82F6';
-  }
-
-  container.innerHTML = `
-    <!-- KPI Row -->
-    <div class="stat-row" style="margin-bottom:24px;">
-      <div class="stat-card stat-card-accent">
-        <div class="stat-label">Total users</div>
-        <div class="stat-value">${totalUsers}</div>
-        <div class="stat-sub">${driverCount} drivers · ${passengerCount} passengers</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Verification rate</div>
-        <div class="stat-value">${totalUsers ? Math.round(verifiedUsers/totalUsers*100) : 0}<span style="font-size:16px;font-weight:400">%</span></div>
-        <div class="stat-sub">${verifiedUsers} / ${totalUsers} verified</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Net revenue</div>
-        <div class="stat-value" style="font-size:22px;">${fmtMoney(totalRevenue)}</div>
-        <div class="stat-sub">Commission booked: ${fmtMoney(totalCommission)}${totalRefundedAll ? ` · ${fmtMoney(totalRefundedAll)} refunded` : ''}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Wallet in circulation</div>
-        <div class="stat-value" style="font-size:22px;">${fmtMoney(totalWalletCirculation)}</div>
-        <div class="stat-sub">${allTrips.length} trips · ${allPayments.length} payments</div>
-      </div>
-    </div>
-
-    <div class="stats-grid">
-      <!-- Nationality breakdown -->
-      <div class="table-card">
-        <div class="table-header">
-          <h3>User nationalities</h3>
-          <span style="font-size:12px;color:var(--gray-400);">${usersWithNat} provided / ${totalUsers}</span>
-        </div>
-        ${natEntries.length === 0 ? `<div class="empty"><p>No nationality provided</p></div>` :
-          natEntries.map(e => {
-            const pct = Math.round(e.count / totalUsers * 100);
-            const barW = Math.round(e.count / maxNatCount * 100);
-            const flagHtml = e.flag
-              ? `<img src="${e.flag}" alt="${e.country}" onerror="this.style.display='none';this.nextSibling.style.display='inline'">`
-              : '';
-            return `
-            <div class="nat-row">
-              <div class="nat-flag">${flagHtml}<span style="${e.flag ? 'display:none' : ''}">🌐</span></div>
-              <div class="nat-country">${e.country}</div>
-              <div class="nat-bar-wrap"><div class="nat-bar" style="width:${barW}%"></div></div>
-              <div class="nat-count">${e.count}</div>
-              <div class="nat-pct">${pct}%</div>
-            </div>`;
-          }).join('')}
-        ${noNatCount > 0 ? `
-          <div class="nat-row" style="opacity:0.5;">
-            <div class="nat-flag"><span>❓</span></div>
-            <div class="nat-country" style="color:var(--gray-400);">Not provided</div>
-            <div class="nat-bar-wrap"><div class="nat-bar" style="width:${Math.round(noNatCount/totalUsers*100)}%;background:var(--gray-300);"></div></div>
-            <div class="nat-count">${noNatCount}</div>
-            <div class="nat-pct">${Math.round(noNatCount/totalUsers*100)}%</div>
-          </div>` : ''}
-      </div>
-
-      <!-- Right column -->
-      <div style="display:flex;flex-direction:column;gap:20px;">
-
-        <!-- Trip status breakdown -->
-        <div class="table-card">
-          <div class="table-header"><h3>Trip statuses</h3><span style="font-size:12px;color:var(--gray-400);">${allTrips.length} total</span></div>
-          ${tripStatusEntries.map(([status, count]) => {
-            const pct = Math.round(count / allTrips.length * 100);
-            return `
-            <div class="progress-row">
-              <div class="progress-label">${statusBadge(status)}</div>
-              <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%;background:${getStatusColor(status)};"></div></div>
-              <div class="progress-value">${count}</div>
-            </div>`;
-          }).join('')}
-        </div>
-
-        <!-- User profile breakdown -->
-        <div class="table-card">
-          <div class="table-header"><h3>User profiles</h3></div>
-          ${[
-            { label: 'Active drivers', count: driverCount, color: '#22C55E' },
-            { label: 'Active passengers', count: passengerCount, color: '#3B82F6' },
-            { label: 'Both', count: bothCount, color: '#FF833D' },
-            { label: 'Incomplete profile (bank)', count: bankComplete, color: '#F59E0B' },
-            { label: 'No role', count: neitherCount, color: '#B0B0B0' },
-          ].map(r => {
-            const pct = totalUsers ? Math.round(r.count / totalUsers * 100) : 0;
-            return `
-            <div class="progress-row">
-              <div class="progress-label">${r.label}</div>
-              <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%;background:${r.color};"></div></div>
-              <div class="progress-value">${r.count}</div>
-            </div>`;
-          }).join('')}
-        </div>
-
-      </div>
-    </div>
-  `;
-}
-
 // ── Search ──
-function globalSearch() {
-  const q = document.getElementById('globalSearchInput').value.trim();
-  if (!q) return;
-  document.getElementById('advancedSearchInput').value = q;
-  switchPage('search');
-  advancedSearch();
-}
 
-function advancedSearch() {
-  const q = escQuery(document.getElementById('advancedSearchInput').value.trim());
-  if (!q) return;
-  const container = document.getElementById('searchResults');
-  container.innerHTML = '<div class="loading"><span class="spinner"></span> Searching...</div>';
-
-  setTimeout(() => {
-    let results = [];
-
-    // Search users
-    const matchedUsers = allUsers.filter(u =>
-      (u.email || '').toLowerCase().includes(q) ||
-      (u.display_name || '').toLowerCase().includes(q) ||
-      (u.firstName || '').toLowerCase().includes(q) ||
-      (u.lastName || '').toLowerCase().includes(q) ||
-      (u.phone_number || '').includes(q) ||
-      u.id.toLowerCase().includes(q)
-    );
-    matchedUsers.forEach(u => results.push({
-      type: '👤 User',
-      title: PRIVACY_MODE ? pseudoName(u.id) : (u.display_name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email),
-      sub: `${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')} · Wallet: ${fmtMoney(u.walletBalance||0)}`,
-      onclick: `openUserPanel('${u.id}')`
-    }));
-
-    // Search payments by Stripe ID
-    const matchedPayments = allPayments.filter(p =>
-      (p.stripePaymentId || '').toLowerCase().includes(q) ||
-      getUserEmail(p.passengerId).toLowerCase().includes(q)
-    );
-    matchedPayments.forEach(p => results.push({
-      type: '💳 Payment',
-      title: `${fmtMoney(p.amount)} — ${getUserName(p.passengerId)}`,
-      sub: `Stripe: ${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')} · ${fmtDate(p.paymentDate)}`,
-      onclick: `openPaymentPanel('${p.id}')`
-    }));
-
-    // Search trips
-    const matchedTrips = allTrips.filter(t =>
-      (t.startLocation?.city || '').toLowerCase().includes(q) ||
-      (t.endLocation?.city || '').toLowerCase().includes(q) ||
-      getUserName(t.driverID).toLowerCase().includes(q)
-    );
-    matchedTrips.forEach(t => results.push({
-      type: '🚗 Trip',
-      title: `${t.startLocation?.city || '?'} → ${t.endLocation?.city || '?'}`,
-      sub: `Driver: ${getUserName(t.driverID)} · ${fmtDate(t.startTime)}`,
-      onclick: `openTripPanel('${t.id}')`
-    }));
-
-    if (results.length === 0) {
-      container.innerHTML = '<div class="empty"><p>No results for "' + q + '"</p></div>';
-      return;
-    }
-
-    container.innerHTML = `
-      <p style="font-size:13px;color:var(--gray-400);margin-bottom:16px;">${results.length} result(s) found</p>
-      ${results.map(r => `
-        <div class="detail-list-item" onclick="${r.onclick}">
-          <div class="dli-top"><span>${r.title}</span><span style="font-size:11px;color:var(--gray-400);">${r.type}</span></div>
-          <div class="dli-sub">${r.sub}</div>
-        </div>
-      `).join('')}
-    `;
-  }, 100);
-}
 </script>
 </body>
 </html>
