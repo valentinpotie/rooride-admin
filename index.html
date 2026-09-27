@@ -2100,19 +2100,25 @@ function renderUserAvatars() {
   if (!candidates.length) return;
   // Each candidate is loaded and measured before it is used. A url that answers with a
   // placeholder or an error leaves an empty circle, so only real images get through.
-  const ok = [];
+  // The three faces must be the same three every time. They are kept in the order of
+  // the list, never in the order the network happens to answer, otherwise a different
+  // trio appears at each sign-in.
+  const ok = new Array(candidates.length).fill(null);
   let left = candidates.length;
-  const done = () => { box.innerHTML = ok.slice(0, 3).map(u => avatarHtml(u, 30)).join(''); };
-  candidates.forEach(u => {
+  const done = () => {
+    box.innerHTML = ok.filter(Boolean).slice(0, 3).map(u => avatarHtml(u, 30)).join('');
+  };
+  candidates.forEach((u, i) => {
     const img = new Image();
-    img.onload = () => { if (img.naturalWidth > 10 && img.naturalHeight > 10) ok.push(u); if (--left === 0) done(); };
+    img.onload = () => { if (img.naturalWidth > 10 && img.naturalHeight > 10) ok[i] = u; if (--left === 0) done(); };
     img.onerror = () => { if (--left === 0) done(); };
     img.src = u.photo_url;
   });
 }
 
-// The ticks live in this browser only. They say "I have handled this", they never
-// change a balance, a status or a record.
+// The ticks live in this browser only, under the address of the site they were made on:
+// a tick made on the local copy is not the same tick as one made on admin.rooride.app.
+// They say "I have handled this", they never change a balance, a status or a record.
 function readTicks() {
   try { return JSON.parse(localStorage.getItem('rooride.todo.ticks') || '{}'); }
   catch (e) { return {}; }
@@ -2190,8 +2196,16 @@ function renderOverviewTodo() {
     pendingId: pendingId.map(u => u.id).sort().join(','),
     driversNoBank: driversNoBank.map(u => u.id).sort().join(','),
   };
+  // A ticked line stays ticked. It only comes back when somebody NEW enters the queue,
+  // so that nobody is silently forgotten. If the queue merely shrinks, or a balance
+  // moves, the tick holds instead of being thrown away.
   const ticks = readTicks();
-  const live = rows.filter(r => !r.key || ticks[r.key] !== signatures[r.key]);
+  const stillTicked = key => {
+    if (ticks[key] === undefined) return false;
+    const handled = new Set(String(ticks[key]).split(',').filter(Boolean));
+    return String(signatures[key]).split(',').filter(Boolean).every(id => handled.has(id));
+  };
+  const live = rows.filter(r => !r.key || !stillTicked(r.key));
   const hidden = rows.length - live.length;
 
   const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
