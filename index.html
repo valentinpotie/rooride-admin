@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root {
@@ -307,6 +308,18 @@ th.check-col, td.check-col { width: 38px; padding-right: 0; }
 .dup-row .dr-name { font-size: 13px; font-weight: 700; }
 .dup-row .dr-sub { font-size: 11.5px; color: var(--gray-400); }
 .dup-row .dr-right { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--gray-400); white-space: nowrap; }
+.danger-zone { border: 1px solid #FECACA; background: #FEF2F2; border-radius: 12px; padding: 14px 16px; }
+.danger-zone h5 { font-size: 12px; font-weight: 700; color: #991B1B; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
+.danger-zone p { font-size: 12px; color: #7F1D1D; line-height: 1.5; margin-bottom: 11px; }
+.danger-btn {
+  width: 100%; border-radius: 9px; padding: 10px; font-family: inherit; font-size: 13px;
+  font-weight: 700; cursor: pointer; margin-bottom: 7px; background: var(--white);
+  border: 1.5px solid #FCA5A5; color: #991B1B; transition: all 0.15s;
+}
+.danger-btn:hover:not(:disabled) { background: #991B1B; color: #fff; border-color: #991B1B; }
+.danger-btn.soft { border-color: var(--gray-200); color: var(--gray-700, #2D2D2D); }
+.danger-btn.soft:hover:not(:disabled) { background: var(--dark, #1A1A1A); color: #fff; border-color: var(--dark, #1A1A1A); }
+.danger-btn:disabled { opacity: .5; cursor: default; }
 .note-list { margin-bottom: 10px; }
 .note-item { background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
 .note-item .nt-text { font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
@@ -579,6 +592,7 @@ body.dd-mode .dd-banner { display: flex; }
 }
 .todo-check:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
 .todo-check svg { width: 16px; height: 16px; }
+.todo-check-gap { width: 34px; flex-shrink: 0; }
 .todo-done { text-align: center; padding: 12px 20px; font-size: 12.5px; color: var(--gray-400); }
 .todo-done a { color: var(--orange); cursor: pointer; text-decoration: underline; }
 .todo-btn {
@@ -1066,6 +1080,9 @@ const db = firebase.firestore();
 // when something blocks it, which held every query on this page. Auto-detection is
 // asked for explicitly so the fallback happens on the first attempt.
 try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) { console.warn('firestore settings', e); }
+// Banning, deleting and changing an address live in Firebase Authentication, not in the
+// database, so a browser cannot do them: they go through a server function.
+const fns = firebase.app().functions('australia-southeast1');
 const auth = firebase.auth();
 
 // ── Cache ──
@@ -2187,8 +2204,10 @@ function renderOverviewTodo() {
         <div class="todo-title">${r.title}</div>
         <div class="todo-sub">${r.sub}</div>
       </div>
+      ${r.key
+        ? `<button class="todo-check" title="Mark as done" onclick="tickTodo('${r.key}', '${signatures[r.key]}')">${tick}</button>`
+        : '<span class="todo-check-gap"></span>'}
       <button class="todo-btn" onclick="${r.onclick}">${r.action}</button>
-      ${r.key ? `<button class="todo-check" title="Mark as done" onclick="tickTodo('${r.key}', '${signatures[r.key]}')">${tick}</button>` : ''}
     </div>`).join('')
     : '<div class="todo-done" style="padding:22px;">Everything here has been dealt with.</div>')
     + (hidden ? `<div class="todo-done">${hidden} line${hidden > 1 ? 's' : ''} marked as done · <a onclick="clearTicks()">show again</a></div>` : '');
@@ -2799,6 +2818,76 @@ function runDuplicateCheck() {
   openPanel('Duplicate check', html);
 }
 
+// The three actions a browser cannot do on its own. They are kept apart, in a block
+// that says what each one really does, because none of them can be undone by clicking
+// again.
+function adminSection(u) {
+  if (PRIVACY_MODE || u.isRoorideStaff) return '';
+  const banned = isBanned(u.id);
+  return `
+    <div class="detail-section">
+      <h4>Account</h4>
+      <div class="danger-zone">
+        <h5>${banned ? 'This account is banned' : 'Actions on the login'}</h5>
+        <p>${banned
+          ? 'The person cannot sign in. Lifting the ban lets them straight back in.'
+          : 'These act on the login itself, not on the record. Banning stops the person signing in within the hour; deleting removes the account and its data for good.'}</p>
+        ${banned
+          ? `<button class="danger-btn soft" onclick="adminAction('unban', '${u.id}')">Lift the ban</button>`
+          : `<button class="danger-btn" onclick="adminAction('ban', '${u.id}')">Ban this account</button>`}
+        <button class="danger-btn soft" onclick="adminAction('changeEmail', '${u.id}')">Change the email address</button>
+        <button class="danger-btn" onclick="adminAction('delete', '${u.id}')">Delete this account</button>
+      </div>
+    </div>`;
+}
+
+async function adminAction(action, uid) {
+  const u = usersMap[uid];
+  if (!u) return;
+  const who = displayName(u);
+  let payload = { action, uid };
+
+  if (action === 'ban') {
+    const reason = prompt('Ban ' + who + '?\n\nThey will not be able to sign in. Write why, for the record:');
+    if (reason === null) return;
+    payload.reason = reason;
+  } else if (action === 'unban') {
+    if (!confirm('Lift the ban on ' + who + '? They will be able to sign in again.')) return;
+  } else if (action === 'delete') {
+    const typed = prompt('Delete the account of ' + who + '?\n\nThis cannot be undone: the login and the record both go.\n\nType DELETE to confirm:');
+    if (typed !== 'DELETE') return;
+  } else if (action === 'changeEmail') {
+    const email = prompt('New address for ' + who + ':', u.email || '');
+    if (!email) return;
+    if (!confirm('Change the address to ' + email + '?\n\nThey will sign in with this from now on.')) return;
+    payload.email = email;
+  }
+
+  try {
+    await fns.httpsCallable('adminUserAction')(payload);
+    if (action === 'ban') bannedMap[uid] = { id: uid, bannedAt: new Date() };
+    if (action === 'unban') delete bannedMap[uid];
+    if (action === 'changeEmail') u.email = payload.email;
+    if (action === 'delete') {
+      delete usersMap[uid];
+      allUsers = allUsers.filter(x => x.id !== uid);
+      usersBase = allUsers;
+      closePanel();
+      applyUserView();
+      renderOverviewTodo();
+      return;
+    }
+    applyUserView();
+    renderOverviewTodo();
+    openUserPanel(uid);
+  } catch (e) {
+    const msg = (e && e.message) || String(e);
+    alert(/permission|internal|not-found|403/i.test(msg)
+      ? 'The server refused: ' + msg + '\n\nIf this says permission, the function still needs its invoker right.'
+      : 'It did not work: ' + msg);
+  }
+}
+
 function notesSection(u) {
   const notes = Array.isArray(u.adminNotes) ? u.adminNotes.slice().reverse() : [];
   const list = notes.length
@@ -2945,6 +3034,7 @@ function openUserPanel(uid) {
     </div>
 
     ${notesSection(u)}
+    ${adminSection(u)}
     ${idSection}
     ${bankSection}
 
