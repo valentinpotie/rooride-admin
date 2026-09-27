@@ -571,6 +571,16 @@ body.dd-mode .dd-banner { display: flex; }
 .todo-text { flex: 1; min-width: 0; }
 .todo-title { font-size: 14px; font-weight: 700; }
 .todo-sub { font-size: 12.5px; color: var(--gray-400); margin-top: 2px; }
+.todo-check {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid var(--gray-200); background: var(--white); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: var(--gray-300);
+  transition: all 0.15s; font-family: inherit;
+}
+.todo-check:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+.todo-check svg { width: 16px; height: 16px; }
+.todo-done { text-align: center; padding: 12px 20px; font-size: 12.5px; color: var(--gray-400); }
+.todo-done a { color: var(--orange); cursor: pointer; text-decoration: underline; }
 .todo-btn {
   background: var(--white); border: 1.5px solid var(--gray-200); border-radius: 9px;
   padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 600;
@@ -2084,6 +2094,23 @@ function renderUserAvatars() {
   });
 }
 
+// The ticks live in this browser only. They say "I have handled this", they never
+// change a balance, a status or a record.
+function readTicks() {
+  try { return JSON.parse(localStorage.getItem('rooride.todo.ticks') || '{}'); }
+  catch (e) { return {}; }
+}
+function tickTodo(key, signature) {
+  const t = readTicks();
+  t[key] = signature;
+  try { localStorage.setItem('rooride.todo.ticks', JSON.stringify(t)); } catch (e) {}
+  renderOverviewTodo();
+}
+function clearTicks() {
+  try { localStorage.removeItem('rooride.todo.ticks'); } catch (e) {}
+  renderOverviewTodo();
+}
+
 function renderOverviewTodo() {
   const noBank = u => !(u.bankDetails && u.bankDetails.isBankDetailsComplete);
   const pendingId = allUsers.filter(u => u.idPhoto && !u.isVerified);
@@ -2107,14 +2134,14 @@ function renderOverviewTodo() {
   const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
 
   const rows = [
-    { n: payable.length,
+    { key: 'payable', n: payable.length,
       tone: 'done',
       title: 'Drivers to pay now',
       sub: payable.length
         ? plural(tripsBehind(payable), 'trip') + ' completed, bank details on file. Make the transfer: ' + fmtMoney(payableTotal) + '.'
         : 'Nobody is waiting on a transfer.',
       action: 'See the list', onclick: "showUserFilter('payable')" },
-    { n: owedNoBank.length,
+    { key: 'owedNoBank', n: owedNoBank.length,
       tone: owedNoBank.length ? 'alert' : 'done',
       title: 'Drivers owed money with no bank details',
       sub: owedNoBank.length
@@ -2137,8 +2164,23 @@ function renderOverviewTodo() {
       action: 'See the list', onclick: "showUserFilter('driversNoBank')" },
   ];
 
+  // Ticking a line is a checklist, nothing more: no record is written anywhere. The tick
+  // is remembered in this browser, and the line comes back on its own if the people
+  // behind it change.
+  const signatures = {
+    payable: payable.map(u => u.id).sort().join(','),
+    owedNoBank: owedNoBank.map(u => u.id).sort().join(','),
+    pendingId: pendingId.map(u => u.id).sort().join(','),
+    driversNoBank: driversNoBank.map(u => u.id).sort().join(','),
+  };
+  const ticks = readTicks();
+  const live = rows.filter(r => !r.key || ticks[r.key] !== signatures[r.key]);
+  const hidden = rows.length - live.length;
+
+  const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   const box = document.getElementById('overviewTodo');
-  if (box) box.innerHTML = rows.map(r => `
+  if (!box) return;
+  box.innerHTML = (live.length ? live.map(r => `
     <div class="todo-row">
       <div class="todo-count ${r.tone}">${r.n}</div>
       <div class="todo-text">
@@ -2146,7 +2188,10 @@ function renderOverviewTodo() {
         <div class="todo-sub">${r.sub}</div>
       </div>
       <button class="todo-btn" onclick="${r.onclick}">${r.action}</button>
-    </div>`).join('');
+      ${r.key ? `<button class="todo-check" title="Mark as done" onclick="tickTodo('${r.key}', '${signatures[r.key]}')">${tick}</button>` : ''}
+    </div>`).join('')
+    : '<div class="todo-done" style="padding:22px;">Everything here has been dealt with.</div>')
+    + (hidden ? `<div class="todo-done">${hidden} line${hidden > 1 ? 's' : ''} marked as done · <a onclick="clearTicks()">show again</a></div>` : '');
 }
 
 // Sends the user to the Users page with one of the queues already applied, rather
@@ -2837,8 +2882,7 @@ function openUserPanel(uid) {
     </div>`;
 
   const actions = PRIVACY_MODE ? '' : `
-    ${balance > 0 && bank ? `<button class="panel-cta pay" onclick="alert('Transfer ${fmtMoney(balance)} to ${String(displayName(u)).replace(/'/g, "")}, then record it as a bank transfer in the wallet.')">Pay ${fmtMoney(balance)} now</button>` : ''}
-    ${balance > 0 && !bank ? `<button class="panel-cta mail" onclick="window.location.href='mailto:${u.email}?subject=Your Rooride earnings are waiting'">Email for bank details</button>` : ''}
+    ${balance > 0 && !bank ? `<button class="panel-cta mail" onclick="window.location.href='mailto:${u.email || ''}?subject=' + encodeURIComponent('Your Rooride earnings are waiting: we need your bank details')">Email for bank details</button>` : ''}
   `;
 
   // The file says where the identity stands, it does not decide it. A document waiting
