@@ -2585,6 +2585,7 @@ function openPanel(title, html) {
 }
 
 function closePanel() {
+  FROM_DUPLICATES = false;
   document.getElementById('panelOverlay').classList.remove('open');
   document.getElementById('sidePanel').classList.remove('open');
 }
@@ -2739,6 +2740,14 @@ function lockExportForDd() {
   }
 }
 
+// A record opened from the duplicate list remembers it, so that deleting the account
+// brings you back to the list, recomputed, instead of closing everything.
+let FROM_DUPLICATES = false;
+function openFromDuplicates(uid) {
+  FROM_DUPLICATES = true;
+  openUserPanel(uid);
+}
+
 function runDuplicateCheck() {
   const groups = [];
   const seen = new Set();
@@ -2784,7 +2793,7 @@ function runDuplicateCheck() {
 
   const total = groups.reduce((n, g) => n + g.users.length, 0);
   const row = u => `
-    <div class="dup-row" onclick="if (!String(window.getSelection())) openUserPanel('${u.id}')">
+    <div class="dup-row" onclick="if (!String(window.getSelection())) openFromDuplicates('${u.id}')">
       ${avatarHtml(u, 30)}
       <div style="min-width:0">
         <div class="dr-name">${displayName(u)}</div>
@@ -2886,9 +2895,11 @@ async function adminAction(action, uid) {
       delete usersMap[uid];
       allUsers = allUsers.filter(x => x.id !== uid);
       usersBase = allUsers;
+      const backToList = FROM_DUPLICATES;
       closePanel();
       applyUserView();
       renderOverviewTodo();
+      if (backToList) { FROM_DUPLICATES = true; runDuplicateCheck(); }
       return;
     }
     applyUserView();
