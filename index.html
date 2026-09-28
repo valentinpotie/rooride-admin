@@ -305,8 +305,8 @@ th.check-col, td.check-col { width: 38px; padding-right: 0; }
 .dup-row { display: flex; align-items: center; gap: 11px; padding: 10px 14px; cursor: pointer; border-top: 1px solid var(--gray-100); }
 .dup-row:first-child { border-top: none; }
 .dup-row:hover { background: var(--orange-light); }
-.dup-row .dr-name { font-size: 13px; font-weight: 700; }
-.dup-row .dr-sub { font-size: 11.5px; color: var(--gray-400); }
+.dup-row .dr-name { font-size: 13px; font-weight: 700; cursor: text; user-select: text; }
+.dup-row .dr-sub { font-size: 11.5px; color: var(--gray-400); cursor: text; user-select: text; }
 .dup-row .dr-right { margin-left: auto; text-align: right; font-size: 11.5px; color: var(--gray-400); white-space: nowrap; }
 .danger-zone { border: 1px solid #FECACA; background: #FEF2F2; border-radius: 12px; padding: 14px 16px; }
 .danger-zone h5 { font-size: 12px; font-weight: 700; color: #991B1B; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
@@ -2784,7 +2784,7 @@ function runDuplicateCheck() {
 
   const total = groups.reduce((n, g) => n + g.users.length, 0);
   const row = u => `
-    <div class="dup-row" onclick="openUserPanel('${u.id}')">
+    <div class="dup-row" onclick="if (!String(window.getSelection())) openUserPanel('${u.id}')">
       ${avatarHtml(u, 30)}
       <div style="min-width:0">
         <div class="dr-name">${displayName(u)}</div>
