@@ -612,6 +612,13 @@ body.dd-mode .dd-banner { display: flex; }
 .nat-row:last-child { border-bottom: none; }
 .nat-flag { font-size: 22px; width: 32px; text-align: center; flex-shrink: 0; }
 .nat-flag img { width: 28px; height: auto; border-radius: 3px; object-fit: cover; }
+.src-icon { width: 28px; height: 28px; border-radius: 8px; background: var(--orange-light); color: var(--orange);
+  display: inline-flex; align-items: center; justify-content: center; }
+.src-icon svg { width: 16px; height: 16px; }
+.src-row.muted .src-icon { background: var(--gray-100); color: var(--gray-400); }
+.src-row.muted .nat-country { color: var(--gray-400); }
+.src-row.muted .nat-bar { background: var(--gray-300); }
+
 .nat-country { font-size: 13px; font-weight: 600; width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nat-bar-wrap { flex: 1; background: var(--gray-100); border-radius: 100px; height: 8px; overflow: hidden; }
 .nat-bar { height: 100%; background: var(--orange); border-radius: 100px; transition: width 0.6s ease; }
@@ -872,11 +879,18 @@ body.dd-mode .dd-banner { display: flex; }
           </div>
         </div>
 
-        <div class="table-card">
+        <div class="table-card" style="margin-bottom:24px;">
           <div class="table-header">
             <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Recent activity</h3>
           </div>
           <div id="overviewActivity"><div class="loading" style="padding:20px;"><span class="spinner"></span> Loading...</div></div>
+        </div>
+
+        <div class="table-card" style="margin-bottom:24px;">
+          <div class="table-header">
+            <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4h3l6 4V6L6 10H3z"/><path d="M16 9a4 4 0 0 1 0 6"/><path d="M18.5 6.5a8 8 0 0 1 0 11"/></svg>How users heard about us</h3>
+          </div>
+          <div id="overviewSourcesBody" style="padding:4px 20px 12px;"><div class="loading"><span class="spinner"></span> Loading...</div></div>
         </div>
 
 
@@ -1332,6 +1346,7 @@ async function loadAllData() {
   renderWalletTable(allWalletTx);
   renderOverviewActivity();
   renderOverviewTops();
+  renderOverviewSources();
   renderOverviewTodo();
   renderOverviewActivityFeed();
   renderVerificationPage();
@@ -2312,6 +2327,47 @@ function renderOverviewTops() {
     : '<div class="empty"><p>No nationality provided</p></div>';
 }
 
+
+// The answer people give at sign-up to "How did you hear about us?", in a fixed order.
+// "Other", "not_specified" (what the app writes when the question is skipped) and the
+// accounts created before the question existed (November 2024), which carry no field at
+// all, say nothing about where people came from: they are one line, No information,
+// kept out of the percentages.
+const SOURCE_DEF = {
+  Web:       { label: 'Web search', icon: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>' },
+  Friends:   { label: 'Friends',    icon: '<circle cx="9" cy="8" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.3"/><path d="M15.5 14.2A4.5 4.5 0 0 1 21 18.5"/>' },
+  Facebook:  { label: 'Facebook',   icon: '<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M15 8h-1.6A1.9 1.9 0 0 0 11.5 9.9V20.5"/><path d="M9.5 13h5"/>' },
+  Instagram: { label: 'Instagram',  icon: '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="3.8"/><circle cx="17" cy="7" r=".6" fill="currentColor"/>' },
+  QRcode:    { label: 'QR code',    icon: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>' },
+};
+const SOURCE_ORDER = ['Facebook', 'Instagram', 'QRcode', 'Friends', 'Web'];
+const NO_INFO_ICON = '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 0 1 4.8 1c0 1.7-2.4 2-2.4 3.5"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>';
+
+function renderOverviewSources() {
+  const box = document.getElementById('overviewSourcesBody');
+  if (!box) return;
+  const counts = {};
+  let unknown = 0;
+  allUsers.forEach(u => {
+    const v = String(u.howHeardAboutUs || '').trim();
+    if (!SOURCE_DEF[v]) { unknown++; return; }
+    counts[v] = (counts[v] || 0) + 1;
+  });
+  const rows = SOURCE_ORDER.map(key => ({ label: SOURCE_DEF[key].label, icon: SOURCE_DEF[key].icon, count: counts[key] || 0 }));
+  const answered = rows.reduce((n, r) => n + r.count, 0);
+  const max = Math.max(...rows.map(r => r.count), unknown, 1);
+  const line = (r, muted) => `
+      <div class="nat-row src-row${muted ? ' muted' : ''}">
+        <div class="nat-flag"><span class="src-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${r.icon}</svg></span></div>
+        <div class="nat-country">${r.label}</div>
+        <div class="nat-bar-wrap"><div class="nat-bar" style="width:${Math.round(r.count / max * 100)}%"></div></div>
+        <div class="nat-count">${r.count.toLocaleString('en-AU')}</div>
+        <div class="nat-pct">${muted ? '' : (answered ? Math.round(r.count / answered * 100) + '%' : '')}</div>
+      </div>`;
+  if (!answered && !unknown) { box.innerHTML = '<div class="empty"><p>No answer yet</p></div>'; return; }
+  box.innerHTML = rows.map(r => line(r, false)).join('')
+    + (unknown ? line({ label: 'No information', icon: NO_INFO_ICON, count: unknown }, true) : '');
+}
 
 function renderWalletTable() { /* the wallet is read inside each booking row */ }
 
