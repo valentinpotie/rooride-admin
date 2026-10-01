@@ -735,7 +735,7 @@ body.dd-mode .dd-banner { display: flex; }
 
       <div class="dd-banner">
         <span style="font-size:15px;line-height:1;">🔒</span>
-        <span><strong>Anonymised dataset.</strong> Names and avatars are <strong>synthetic placeholders</strong>, not real user identities. Every figure, trip, payment, amount and date is real and unmodified. Personal data is excluded: emails, phone numbers, ID documents, bank details, chat contents and precise locations are not part of this dataset.</span>
+        <span id="ddBannerText"><strong>Anonymised dataset.</strong> Names and avatars are <strong>synthetic placeholders</strong>, not real user identities. Every figure, trip, payment, amount and date is real and unmodified. Personal data is excluded: emails, phone numbers, ID documents, bank details, chat contents and precise locations are not part of this dataset.</span>
       </div>
 
       <!-- OVERVIEW -->
@@ -1106,6 +1106,10 @@ let natMap = {};   // id -> nationality data
 // dd account is the Firestore rules.
 let PRIVACY_MODE = false;
 let DD_MODE = false; // true for accounts carrying the dd custom claim (see checkAdmin)
+// True when the snapshot was published with --real-identities: names, profile photos and
+// nationalities are real, contact and financial data still excluded. Read from
+// dd_metrics/snapshot, so the page always says what the data actually is.
+let DD_REAL = false;
 // Where each page loads its rows from. dd accounts are switched to the pseudonymised
 // snapshot collections published by scripts/08_publish_dd_snapshot.js.
 const SRC = { users: 'users', trips: 'trips', payments: 'payments', wallet: 'walletTransactions', commissions: 'appCommissionRecords' };
@@ -1171,7 +1175,7 @@ function avatarHtml(u, px) {
   let h = 0;
   for (const ch of String((u && u.id) || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const bg = AVATAR_COLORS[h % AVATAR_COLORS.length];
-  const inner = (!PRIVACY_MODE && u && u.photo_url)
+  const inner = ((!PRIVACY_MODE || DD_REAL) && u && u.photo_url)
     ? `<img src="${u.photo_url}" alt="" onerror="this.remove()">`
     : initials;
   return `<span class="avatar" style="width:${size}px;height:${size}px;background:${bg};font-size:${Math.round(size * 0.38)}px;">${inner}</span>`;
@@ -1260,10 +1264,16 @@ function showDDApp(user) {
   pill.style.display = 'inline-flex';
   document.getElementById('privacyPill').style.display = 'none';
   db.collection('dd_metrics').doc('snapshot').get().then(s => {
-    const at = s.exists && s.data().publishedAt;
-    if (at) pill.textContent = '🔒 Anonymised data · snapshot ' + new Date(at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
-  }).catch(() => {});
-  loadAllDataGuarded();
+    const snap = s.exists ? s.data() : {};
+    DD_REAL = snap.identities === 'real';
+    const at = snap.publishedAt;
+    const label = DD_REAL ? '🔒 Due diligence data' : '🔒 Anonymised data';
+    pill.textContent = at ? label + ' · snapshot ' + new Date(at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : label;
+    if (DD_REAL) document.getElementById('ddBannerText').innerHTML =
+      '<strong>Due diligence dataset.</strong> Names, profile photos and nationalities are real, and every figure, trip, payment, amount and date is real and unmodified. ' +
+      'Emails, phone numbers, ID documents, bank details, chat contents, account identifiers and precise locations remain private until completion, ' +
+      'in line with the Australian Privacy Act and Rooride\u2019s privacy policy, and are not part of this dataset.';
+  }).catch(() => {}).then(() => loadAllDataGuarded());
 }
 
 function doLogout() {
@@ -1309,6 +1319,7 @@ function switchPage(page) {
 // can show one account the rows fetched for the other. Clearing the DOM too, because a
 // failed load leaves whatever was painted last on screen.
 function resetState() {
+  DD_REAL = false;
   allUsers = []; allTrips = []; allPayments = []; allWalletTx = [];
   allCommissions = []; allNationalities = [];
   usersMap = {}; natMap = {}; bannedMap = {};
