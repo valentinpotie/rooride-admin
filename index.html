@@ -1119,16 +1119,22 @@ function pseudoName(uid) {
   // In the anonymised view the stored display_name is already a synthetic placeholder
   // published by scripts/08_publish_dd_snapshot.js — never a real person's name.
   if (DD_MODE) {
-    const n = usersMap[uid] && usersMap[uid].display_name;
+    // Real names come with the same encoding quirk as in the staff view ("Maya+Rivera").
+    const n = usersMap[uid] && String(usersMap[uid].display_name || '').replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
     if (n) return n;
   }
   return 'User ' + (uid ? String(uid).slice(-4).toUpperCase() : '????');
 }
-function maskEmail(email) {
-  if (!email) return '—';
-  return email.charAt(0) + '•••@•••';
+// In the buyer's view the contact details are never in the data. Something is always
+// shown in their place, never a dash: the first letter of the email when it was
+// published, and the phone mask only for accounts that have one.
+function maskEmail(email, u) {
+  if (email) return email.charAt(0) + '•••@•••';
+  if (DD_MODE && u) return (u.emailInitial || '') + '•••@•••';
+  return '—';
 }
-function maskPhone(phone) {
+function maskPhone(phone, u) {
+  if (DD_MODE && u && !phone) return u.hasPhone ? '••• ••• •••' : 'Not provided';
   if (!phone) return '—';
   const digits = String(phone).replace(/\D/g, '');
   if (!digits) return '—';
@@ -1480,7 +1486,7 @@ function getUserEmail(ref) {
   if (!ref) return '';
   const uid = typeof ref === 'string' ? ref : ref.id || ref.path?.split('/').pop();
   const email = usersMap[uid]?.email || '';
-  if (PRIVACY_MODE) return email ? maskEmail(email) : '';
+  if (PRIVACY_MODE) return maskEmail(email, usersMap[uid]);
   return email;
 }
 
@@ -1683,7 +1689,7 @@ function renderUsersTable(users, keepPage) {
           <div class="avatar-wrap">${avatarHtml(u, 34)}${flag}</div>
           <div class="user-lines">
             <div class="user-name">${displayName(u)}${bannedBadge(u.id)}</div>
-            <div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+            <div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email, u) : (u.email || '—')}</div>
           </div>
         </div>
       </td>
@@ -1876,7 +1882,7 @@ function renderPaymentsTable(payments) {
         <div class="avatar-wrap">${avatarHtml(u, 32)}${flag}</div>
         <div class="user-lines">
           <div class="user-name">${displayName(u)}</div>
-          ${withMail ? `<div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>` : `<div class="user-mail">${fmtDay(p.paymentDate)}</div>`}
+          ${withMail ? `<div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email, u) : (u.email || '—')}</div>` : `<div class="user-mail">${fmtDay(p.paymentDate)}</div>`}
         </div>
       </div>`;
     };
@@ -2681,7 +2687,7 @@ function personRow(ref, role) {
       ${avatarHtml(u, 36)}
       <div style="min-width:0;flex:1">
         <div class="pr-name">${displayName(u)}${bannedBadge(id)}</div>
-        <div class="pr-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+        <div class="pr-mail">${PRIVACY_MODE ? maskEmail(u.email, u) : (u.email || '—')}</div>
       </div>
       ${role ? `<span class="role-tag role-${role}">${role === 'driver' ? 'Driver' : 'Passenger'}</span>` : ''}
     </div>`;
@@ -2990,7 +2996,7 @@ function openUserPanel(uid) {
       <div class="avatar-wrap">${avatarHtml(u, 52)}${flag}</div>
       <div style="min-width:0">
         <div class="ph-name">${displayName(u)}</div>
-        <div class="ph-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+        <div class="ph-mail">${PRIVACY_MODE ? maskEmail(u.email, u) : (u.email || '—')}</div>
         <div class="ph-tags">${tags}</div>
       </div>
     </div>
@@ -3000,7 +3006,7 @@ function openUserPanel(uid) {
 
     <div class="detail-section">
       <h4>Profile</h4>
-      <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number) : (u.phone_number || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Phone</span><span class="dv mono">${PRIVACY_MODE ? maskPhone(u.phone_number, u) : (u.phone_number || '—')}</span></div>
       <div class="detail-row"><span class="dl">Nationality</span><span class="dv">${nat ? nat.country : '—'}</span></div>
       <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDay(u.created_time)}</span></div>
       <div class="detail-row"><span class="dl">Last activity</span><span class="dv mono">${last ? fmtDay(last) : '—'}</span></div>
@@ -3241,7 +3247,7 @@ function renderVerifTable(type) {
             <div class="avatar-wrap">${avatarHtml(u, 34)}${flag}</div>
             <div class="user-lines">
               <div class="user-name">${displayName(u)}${bannedBadge(u.id)}</div>
-              <div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email) : (u.email || '—')}</div>
+              <div class="user-mail">${PRIVACY_MODE ? maskEmail(u.email, u) : (u.email || '—')}</div>
             </div>
           </div>
         </td>
