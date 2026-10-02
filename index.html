@@ -224,6 +224,11 @@ tbody tr.trip-sub:hover, tbody tr.trip-sub { background: transparent; }
   font-size: 18px; color: var(--gray-400); transition: all 0.15s;
 }
 .panel-close:hover { background: var(--gray-100); color: var(--dark); }
+.panel-back { display: none; align-items: center; gap: 4px; background: none; border: 1.5px solid var(--gray-200); border-radius: 9px;
+  padding: 5px 10px 5px 6px; margin-right: 10px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--gray-700); cursor: pointer; }
+.panel-back.on { display: inline-flex; }
+.panel-back svg { width: 16px; height: 16px; }
+.panel-back:hover { border-color: var(--orange-mid); background: var(--orange-light); color: var(--orange); }
 .panel-body { flex: 1; overflow-y: auto; padding: 24px; }
 
 
@@ -1083,6 +1088,7 @@ body.dd-mode .dd-banner { display: flex; }
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 <div class="side-panel" id="sidePanel">
   <div class="panel-head">
+    <button class="panel-back" id="panelBack" onclick="panelBack()" title="Back to the previous record"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Back</span></button>
     <h3 id="panelTitle">Details</h3>
     <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
@@ -2659,8 +2665,32 @@ function filterPaymentsTable() {
 }
 
 // ── Panels ──
+// The records opened one from another are remembered, so that going from a person to a
+// trip to another person can be walked back. Reopening the same record (after an action
+// on it) replaces it instead of stacking it twice. Closing the panel forgets the trail.
+const PANEL_TRAIL = [];
+let PANEL_CURRENT = null;
+function showPanelBack() {
+  const b = document.getElementById('panelBack');
+  if (b) b.classList.toggle('on', PANEL_TRAIL.length > 0);
+}
+function panelBack() {
+  const prev = PANEL_TRAIL.pop();
+  if (!prev) return;
+  PANEL_CURRENT = prev;
+  document.getElementById('panelTitle').textContent = prev.title;
+  document.getElementById('panelBody').innerHTML = prev.html;
+  document.getElementById('panelBody').scrollTop = prev.scroll || 0;
+  showPanelBack();
+}
 function openPanel(title, html) {
   const panel = document.getElementById('sidePanel');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen && PANEL_CURRENT && PANEL_CURRENT.title !== title) {
+    PANEL_TRAIL.push({ ...PANEL_CURRENT, scroll: document.getElementById('panelBody').scrollTop });
+  }
+  PANEL_CURRENT = { title, html };
+  showPanelBack();
   document.getElementById('panelTitle').textContent = title;
   document.getElementById('panelBody').innerHTML = html;
   document.getElementById('panelBody').scrollTop = 0;
@@ -2669,6 +2699,9 @@ function openPanel(title, html) {
 }
 
 function closePanel() {
+  PANEL_TRAIL.length = 0;
+  PANEL_CURRENT = null;
+  showPanelBack();
   document.getElementById('panelOverlay').classList.remove('open');
   document.getElementById('sidePanel').classList.remove('open');
 }
