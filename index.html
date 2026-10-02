@@ -225,7 +225,7 @@ tbody tr.trip-sub:hover, tbody tr.trip-sub { background: transparent; }
 }
 .panel-close:hover { background: var(--gray-100); color: var(--dark); }
 .panel-back { display: none; align-items: center; gap: 4px; background: none; border: 1.5px solid var(--gray-200); border-radius: 9px;
-  padding: 5px 10px 5px 6px; margin-right: 10px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--gray-700); cursor: pointer; }
+  padding: 5px 10px 5px 6px; margin-right: 0; font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--gray-700); cursor: pointer; }
 .panel-back.on { display: inline-flex; }
 .panel-back svg { width: 16px; height: 16px; }
 .panel-back:hover { border-color: var(--orange-mid); background: var(--orange-light); color: var(--orange); }
@@ -363,6 +363,7 @@ th.check-col, td.check-col { width: 38px; padding-right: 0; }
 #page-verification .table-card { position: relative; }
 .verif-lock { display: none; }
 body.dd-mode #page-verification table { filter: blur(6px); pointer-events: none; user-select: none; }
+body.dd-mode #page-verification .table-card { height: calc(100vh - 190px); min-height: 380px; overflow: hidden; }
 body.dd-mode .verif-lock { display: flex; position: absolute; left: 0; right: 0; top: 70px; bottom: 0; z-index: 3;
   flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; }
 .verif-lock svg { width: 46px; height: 46px; padding: 18px; box-sizing: content-box; background: var(--white); color: var(--dark);
@@ -382,6 +383,8 @@ body.dd-mode .verif-lock { display: flex; position: absolute; left: 0; right: 0;
 .detail-list-item.go { display: flex; align-items: center; gap: 12px; cursor: pointer;
   background: var(--white); border: 1px solid var(--gray-200); }
 .detail-list-item.go:hover { background: var(--orange-light); border-color: var(--orange-mid); }
+.detail-list-item.plain, .detail-list-item.plain:hover { display: flex; align-items: center; gap: 12px; cursor: default;
+  background: var(--white); border: 1px solid var(--gray-200); }
 .dli-main { flex: 1; min-width: 0; }
 .dli-title { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
 .dli-end { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
@@ -1108,8 +1111,8 @@ body.dd-mode .dd-banner { display: flex; }
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 <div class="side-panel" id="sidePanel">
   <div class="panel-head">
-    <button class="panel-back" id="panelBack" onclick="panelBack()" title="Back to the previous record"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Back</span></button>
     <h3 id="panelTitle">Details</h3>
+    <button class="panel-back" id="panelBack" onclick="panelBack()" title="Back to the previous record"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg><span>Back</span></button>
     <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
   <div class="panel-body" id="panelBody"></div>
@@ -3132,9 +3135,12 @@ function openUserPanel(uid) {
       </div>`)}
 
     ${list('Wallet history (' + userWalletTx.length + ')', userWalletTx, 'No movement', w => `
-      <div class="detail-list-item">
-        <div class="dli-top"><span class="wallet-amount ${(w.amount || 0) >= 0 ? 'wallet-positive' : 'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
-        <div class="dli-sub">${fmtDay(w.transactionDate)}${w.description ? ' · ' + w.description : (routeOf(w.relatedTrip) ? ' · ' + routeOf(w.relatedTrip) : '')}</div>
+      <div class="detail-list-item plain">
+        <div class="dli-main">
+          <div class="dli-title wallet-amount ${(w.amount || 0) >= 0 ? 'wallet-positive' : 'wallet-negative'}">${fmtMoney(w.amount)}</div>
+          <div class="dli-sub">${fmtDay(w.transactionDate)}${w.description ? ' · ' + w.description : (routeOf(w.relatedTrip) ? ' · ' + routeOf(w.relatedTrip) : '')}</div>
+        </div>
+        <div class="dli-end">${statusBadge(w.transactionType)}</div>
       </div>`)}
   `;
   openPanel(getUserName(uid), html);
