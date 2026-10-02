@@ -353,6 +353,29 @@ th.check-col, td.check-col { width: 38px; padding-right: 0; }
   margin-bottom: 8px; cursor: pointer; transition: all 0.15s;
 }
 .detail-list-item:hover { background: var(--orange-light); }
+.detail-list-item:not([onclick]) { cursor: default; }
+.doc-private { position: relative; cursor: default; overflow: hidden; }
+.fake-id { width: 78%; max-width: 330px; aspect-ratio: 1.58; background: linear-gradient(135deg, #E9EEF5, #D9E2EC); border-radius: 12px;
+  display: grid; grid-template-columns: 30% 1fr; grid-template-rows: 1fr auto; gap: 10px; padding: 14px; filter: blur(5px); }
+.fake-id .fi-photo { background: #B8C4D2; border-radius: 8px; }
+.fake-id .fi-lines { display: flex; flex-direction: column; justify-content: center; gap: 9px; }
+.fake-id .fi-lines i { display: block; height: 9px; border-radius: 5px; background: #A7B4C4; }
+.fake-id .fi-band { grid-column: 1 / -1; height: 16px; border-radius: 4px; background: #C5D0DC; }
+.doc-lock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--gray-700); }
+.doc-lock svg { width: 30px; height: 30px; background: var(--white); border-radius: 50%; padding: 9px; box-sizing: content-box; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+.doc-lock span { font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.85); padding: 4px 10px; border-radius: 999px; }
+.detail-list-item:not([onclick]):hover { background: var(--gray-100); }
+.detail-list-item.go { position: relative; padding-right: 38px; cursor: pointer; }
+.detail-list-item .dli-go { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--gray-300); }
+.detail-list-item .dli-go svg { width: 18px; height: 18px; display: block; }
+.detail-list-item.go:hover .dli-go { color: var(--orange); }
+.booking-card { border: 1px solid var(--gray-200); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+.booking-card .person-row { border: none; border-radius: 0; }
+.booking-meta { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--gray-100); font-size: 12.5px; cursor: pointer; }
+.booking-meta:hover { background: var(--orange-light); }
+.booking-meta .bm-amount { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13.5px; }
+.booking-meta .bm-date { color: var(--gray-400); }
+.booking-meta .bm-link { margin-left: auto; color: var(--orange); font-weight: 600; }
 .detail-list-item .dli-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
 .detail-list-item .dli-sub { font-size: 12px; color: var(--gray-400); }
 
@@ -1134,7 +1157,7 @@ function maskEmail(email, u) {
   return '—';
 }
 function maskPhone(phone, u) {
-  if (DD_MODE && u && !phone) return u.hasPhone ? '••• ••• •••' : 'Not provided';
+  if (DD_MODE && u && !phone) return u.hasPhone ? '••• ••• ••' + (u.phoneLast2 || '•') : 'Not provided';
   if (!phone) return '—';
   const digits = String(phone).replace(/\D/g, '');
   if (!digits) return '—';
@@ -1266,8 +1289,8 @@ function showDDApp(user) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('sidebarUserEmail').textContent = user.email;
+  // The banner says what the data is on every page; the pill in the top bar repeated it.
   const pill = document.getElementById('ddPill');
-  pill.style.display = 'inline-flex';
   document.getElementById('privacyPill').style.display = 'none';
   db.collection('dd_metrics').doc('snapshot').get().then(s => {
     const snap = s.exists ? s.data() : {};
@@ -2156,7 +2179,7 @@ function clearTicks() {
 
 function renderOverviewTodo() {
   const noBank = u => !(u.bankDetails && u.bankDetails.isBankDetailsComplete);
-  const pendingId = allUsers.filter(u => u.idPhoto && !u.isVerified);
+  const pendingId = allUsers.filter(u => hasDoc(u) && !u.isVerified);
   const owedNoBank = allUsers.filter(u => (u.walletBalance || 0) > 0 && noBank(u));
   const payable = allUsers.filter(u => (u.walletBalance || 0) > 0 && !noBank(u));
   const driverIds = new Set(allTrips.map(t => getRefId(t.driverID) || t.driverID).filter(Boolean));
@@ -2421,7 +2444,7 @@ let TRIP_BOTHWAYS = false;
 let ROUTE_FILTER = 'all';
 // Sorting: every figure in the table can be read from the biggest or the smallest.
 // The default puts the routes that actually converted at the top.
-let routesSort = { key: 'default', dir: 'desc' };
+let routesSort = { key: 'fill', dir: 'desc' };
 
 function sortRoutesBy(key) {
   if (routesSort.key === key) routesSort.dir = routesSort.dir === 'asc' ? 'desc' : 'asc';
@@ -2547,7 +2570,7 @@ function renderRoutes(keepPage) {
     list.sort((a, b) => (b.seatsPaid > 0) - (a.seatsPaid > 0) || b.seatsPaid - a.seatsPaid || b.trips.length - a.trips.length);
   } else {
     const dir = routesSort.dir === 'asc' ? 1 : -1;
-    list.sort((a, b) => (value(a) - value(b)) * dir);
+    list.sort((a, b) => (value(a) - value(b)) * dir || b.trips.length - a.trips.length);
   }
 
   [['thRtTrips', 'trips'], ['thRtSeats', 'offered'], ['thRtFill', 'fill'], ['thRtPrice', 'price'], ['thRtEarned', 'earned']]
@@ -2960,7 +2983,10 @@ function openUserPanel(uid) {
   const idSection = PRIVACY_MODE ? `
     <div class="detail-section">
       <h4>Identity</h4>
-      <div style="background:var(--gray-100);border-radius:10px;padding:24px;text-align:center;color:var(--gray-400);font-size:13px;">Hidden in the anonymised view</div>
+      <div class="detail-row"><span class="dl">Status</span><span class="dv">${u.isVerified
+        ? '<span class="badge-status badge-green">Verified</span>'
+        : (hasDoc(u) ? '<span class="badge-status badge-yellow">Pending review</span>' : '<span class="badge-status badge-red">No document</span>')}</span></div>
+      ${hasDoc(u) ? `<div style="margin-top:10px;">${privateDocHtml()}</div>` : ''}
     </div>` : `
     <div class="detail-section">
       <h4>Identity</h4>
@@ -2984,6 +3010,9 @@ function openUserPanel(uid) {
       : `<p style="font-size:13px;color:var(--red);">Not provided. Nothing can be transferred to this person.</p>`}
     </div>`;
 
+  // A row that opens something says so: a chevron on the right, orange on hover.
+  const GO = '<span class="dli-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
+  const routeOf = ref => { const t = allTrips.find(x => x.id === (getRefId(ref) || ref)); return t ? `${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}` : ''; };
   const list = (title, items, empty, row) => `
     <div class="detail-section">
       <h4>${title}</h4>
@@ -3010,7 +3039,7 @@ function openUserPanel(uid) {
       <div class="detail-row"><span class="dl">Nationality</span><span class="dv">${nat ? nat.country : '—'}</span></div>
       <div class="detail-row"><span class="dl">Joined</span><span class="dv mono">${fmtDay(u.created_time)}</span></div>
       <div class="detail-row"><span class="dl">Last activity</span><span class="dv mono">${last ? fmtDay(last) : '—'}</span></div>
-      <div class="detail-row"><span class="dl">Account ID</span><span class="dv mono" style="font-size:11px;">${uid}</span></div>
+      <div class="detail-row"><span class="dl">Account ID</span><span class="dv mono" style="font-size:11px;">${PRIVACY_MODE ? '••••••••••••' : uid}</span></div>
     </div>
 
     ${notesSection(u)}
@@ -3019,21 +3048,24 @@ function openUserPanel(uid) {
     ${bankSection}
 
     ${list('Trips published (' + userTrips.length + ')', userTrips, 'None', t => `
-      <div class="detail-list-item" onclick="openTripPanel('${t.id}')">
+      <div class="detail-list-item go" onclick="openTripPanel('${t.id}')">
         <div class="dli-top"><span>${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}</span>${statusBadge(t.status)}</div>
         <div class="dli-sub">${fmtDay(t.startTime)} · ${fmtMoney(t.pricePerSeat)} a seat · ${t.reservedSeats || 0}/${t.totalSeats || '?'} seats</div>
+        ${GO}
       </div>`)}
 
     ${list('Bookings paid (' + userPayments.length + ')', userPayments, 'None', p => `
-      <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
+      <div class="detail-list-item go" onclick="openPaymentPanel('${p.id}')">
         <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-        <div class="dli-sub">${fmtDay(p.paymentDate)} · ${p.startLocation?.city || '?'} to ${p.endLocation?.city || '?'}</div>
+        <div class="dli-sub">${fmtDay(p.paymentDate)}${routeOf(p.tripId) ? ' · ' + routeOf(p.tripId) : ''}</div>
+        ${GO}
       </div>`)}
 
     ${list('Wallet history (' + userWalletTx.length + ')', userWalletTx, 'No movement', w => `
-      <div class="detail-list-item">
+      <div class="detail-list-item${getRefId(w.relatedTrip) ? ' go' : ''}"${getRefId(w.relatedTrip) ? ` onclick="openTripPanel('${getRefId(w.relatedTrip)}')"` : ''}>
         <div class="dli-top"><span class="wallet-amount ${(w.amount || 0) >= 0 ? 'wallet-positive' : 'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
-        <div class="dli-sub">${fmtDay(w.transactionDate)} · ${w.description || '—'}</div>
+        <div class="dli-sub">${fmtDay(w.transactionDate)}${w.description ? ' · ' + w.description : (routeOf(w.relatedTrip) ? ' · ' + routeOf(w.relatedTrip) : '')}</div>
+        ${getRefId(w.relatedTrip) ? GO : ''}
       </div>`)}
   `;
   openPanel(getUserName(uid), html);
@@ -3097,9 +3129,14 @@ function openTripPanel(tripId) {
     <div class="detail-section">
       <h4>Bookings (${tripPayments.length})</h4>
       ${tripPayments.length ? tripPayments.map(p => `
-        <div class="detail-list-item" onclick="openPaymentPanel('${p.id}')">
-          <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-          <div class="dli-sub">${getUserName(p.passengerId)} · ${fmtDay(p.paymentDate)}</div>
+        <div class="booking-card">
+          ${personRow(p.passengerId, 'passenger')}
+          <div class="booking-meta" onclick="openPaymentPanel('${p.id}')">
+            <span class="bm-amount">${fmtMoney(p.amount)}</span>
+            ${statusBadge(p.paymentStatus)}
+            <span class="bm-date">${fmtDay(p.paymentDate)}</span>
+            <span class="bm-link">See the payment</span>
+          </div>
         </div>`).join('') : '<p style="font-size:13px;color:var(--gray-400)">Nobody booked this trip</p>'}
     </div>`;
   openPanel('Trip', html);
@@ -3152,7 +3189,7 @@ function openPaymentPanel(paymentId) {
 
     <div class="detail-section">
       <h4>Reference</h4>
-      <div class="detail-row"><span class="dl">Stripe</span><span class="dv mono" style="font-size:11px;">${PRIVACY_MODE ? maskId(p.stripePaymentId) : (p.stripePaymentId || '—')}</span></div>
+      <div class="detail-row"><span class="dl">Stripe</span><span class="dv mono" style="font-size:11px;">${PRIVACY_MODE ? '••••••••••••' : (p.stripePaymentId || '—')}</span></div>
       ${p.discountAmount ? `<div class="detail-row"><span class="dl">Discount</span><span class="dv mono">${fmtMoney(p.discountAmount)}</span></div>` : ''}
       <div class="detail-row"><span class="dl">Taken on</span><span class="dv mono">${fmtDate(p.paymentDate)}</span></div>
     </div>`;
@@ -3195,6 +3232,23 @@ function openWalletTxPanel(txId) {
 // ── Verification ──
 let verifFilter = 'pending';
 
+// Whether a person submitted an identity document. In the buyer's view the document is
+// never in the data, only the fact that one exists.
+const hasDoc = u => !!(u && (DD_MODE ? u.hasIdDocument : u.idPhoto));
+// A drawn identity card, blurred, with a padlock: shown to the buyer wherever the staff
+// view shows the document. It is a drawing, never the document blurred.
+const privateDocHtml = () => `<div class="verify-photo-wrap doc-private">
+    <div class="fake-id" aria-hidden="true">
+      <div class="fi-photo"></div>
+      <div class="fi-lines"><i style="width:70%"></i><i style="width:52%"></i><i style="width:82%"></i><i style="width:40%"></i><i style="width:64%"></i></div>
+      <div class="fi-band"></div>
+    </div>
+    <div class="doc-lock">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span>Identity document · private until completion</span>
+    </div>
+  </div>`;
+
 function renderVerificationPage() {
   renderVerifTable(verifFilter);
 }
@@ -3208,9 +3262,9 @@ function filterVerif(type, btn) {
 
 function renderVerifTable(type) {
   let users;
-  if (type === 'pending') users = allUsers.filter(u => u.idPhoto && !u.isVerified);
+  if (type === 'pending') users = allUsers.filter(u => hasDoc(u) && !u.isVerified);
   else if (type === 'verified') users = allUsers.filter(u => u.isVerified);
-  else users = allUsers.filter(u => u.idPhoto || u.isVerified);
+  else users = allUsers.filter(u => hasDoc(u) || u.isVerified);
 
   const tbody = document.getElementById('verifTableBody');
   if (!tbody) return;
@@ -3236,8 +3290,8 @@ function renderVerifTable(type) {
       : '';
     const status = u.isVerified
       ? '<span class="badge-status badge-green">Verified</span>'
-      : (u.idPhoto ? '<span class="badge-status badge-yellow">Pending</span>' : '<span class="badge-status badge-red">No document</span>');
-    const action = u.idPhoto
+      : (hasDoc(u) ? '<span class="badge-status badge-yellow">Pending</span>' : '<span class="badge-status badge-red">No document</span>');
+    const action = hasDoc(u)
       ? `<button class="filter-btn" onclick="event.stopPropagation();openVerificationPanel('${u.id}')">See the document</button>`
       : '<span style="color:var(--gray-300);font-size:12px;">Nothing to see</span>';
     return `
@@ -3303,13 +3357,17 @@ function openVerificationPanel(uid) {
     : '';
 
   // The queue, so a decision leads straight to the next case instead of back to a list.
-  const queue = allUsers.filter(x => x.idPhoto && !x.isVerified);
+  const queue = allUsers.filter(x => hasDoc(x) && !x.isVerified);
   const pos = queue.findIndex(x => x.id === uid);
   const next = pos >= 0 ? (queue[pos + 1] || queue[0]) : queue[0];
 
+  // The buyer's view: a drawn card, blurred, never the document itself, which is not in
+  // its data. A blur over a real image would be undone in two clicks.
   const doc = PRIVACY_MODE
-    ? `<div class="verify-photo-wrap" style="cursor:default;">
-         <span style="color:var(--gray-400);font-size:13px;">Identity documents are not part of the anonymised view</span></div>`
+    ? (hasDoc(u)
+        ? privateDocHtml()
+        : `<div class="verify-photo-wrap" style="cursor:default;">
+             <span style="color:var(--gray-400);font-size:13px;">No document has been submitted</span></div>`)
     : u.idPhoto
       ? `<div class="verify-photo-wrap" id="docWrap" onmousedown="docGrab(event)">
            <div class="doc-loading" id="docLoading-${uid}"><span class="spinner"></span> Loading the document</div>
