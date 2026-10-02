@@ -370,17 +370,23 @@ th.check-col, td.check-col { width: 38px; padding-right: 0; }
 .doc-lock svg { width: 30px; height: 30px; background: var(--white); border-radius: 50%; padding: 9px; box-sizing: content-box; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
 .doc-lock span { font-size: 12.5px; font-weight: 600; background: rgba(255,255,255,.85); padding: 4px 10px; border-radius: 999px; }
 .detail-list-item:not([onclick]):hover { background: var(--gray-100); }
-.detail-list-item.go { position: relative; padding-right: 38px; cursor: pointer; }
-.detail-list-item .dli-go { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--gray-300); }
-.detail-list-item .dli-go svg { width: 18px; height: 18px; display: block; }
-.detail-list-item.go:hover .dli-go { color: var(--orange); }
-.booking-card { border: 1px solid var(--gray-200); border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
-.booking-card .person-row { border: none; border-radius: 0; }
-.booking-meta { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--gray-100); font-size: 12.5px; cursor: pointer; }
-.booking-meta:hover { background: var(--orange-light); }
-.booking-meta .bm-amount { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13.5px; }
-.booking-meta .bm-date { color: var(--gray-400); }
-.booking-meta .bm-link { margin-left: auto; color: var(--orange); font-weight: 600; }
+.detail-list-item.go { display: flex; align-items: center; gap: 12px; cursor: pointer;
+  background: var(--white); border: 1px solid var(--gray-200); }
+.detail-list-item.go:hover { background: var(--orange-light); border-color: var(--orange-mid); }
+.dli-main { flex: 1; min-width: 0; }
+.dli-title { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
+.dli-end { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.dli-go { display: inline-flex; width: 18px; height: 18px; color: var(--gray-300); }
+.dli-go svg { width: 18px; height: 18px; display: block; }
+.detail-list-item.go:hover .dli-go, .booking-card:hover .dli-go { color: var(--orange); }
+.booking-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--gray-200); border-radius: 12px;
+  margin-bottom: 10px; background: var(--white); cursor: pointer; transition: all 0.15s; }
+.booking-card:hover { background: var(--orange-light); border-color: var(--orange-mid); }
+.booking-card .bc-main { flex: 1; min-width: 0; }
+.booking-card .pr-name { font-size: 13.5px; font-weight: 700; }
+.booking-card .pr-mail { font-size: 11.5px; color: var(--gray-400); font-family: 'Space Mono', monospace; }
+.booking-card .bc-pay { font-size: 12.5px; color: var(--gray-600); margin-top: 4px; }
+.booking-card .bm-amount { font-family: 'Space Mono', monospace; font-weight: 700; color: var(--dark); }
 .detail-list-item .dli-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
 .detail-list-item .dli-sub { font-size: 12px; color: var(--gray-400); }
 
@@ -3082,26 +3088,47 @@ function openUserPanel(uid) {
 
     ${list('Trips published (' + userTrips.length + ')', userTrips, 'None', t => `
       <div class="detail-list-item go" onclick="openTripPanel('${t.id}')">
-        <div class="dli-top"><span>${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}</span>${statusBadge(t.status)}</div>
-        <div class="dli-sub">${fmtDay(t.startTime)} · ${fmtMoney(t.pricePerSeat)} a seat · ${t.reservedSeats || 0}/${t.totalSeats || '?'} seats</div>
-        ${GO}
+        <div class="dli-main">
+          <div class="dli-title">${t.startLocation?.city || '?'} to ${t.endLocation?.city || '?'}</div>
+          <div class="dli-sub">${fmtDay(t.startTime)} · ${fmtMoney(t.pricePerSeat)} a seat · ${t.reservedSeats || 0}/${t.totalSeats || '?'} seats</div>
+        </div>
+        <div class="dli-end">${statusBadge(t.status)}${GO}</div>
       </div>`)}
 
     ${list('Bookings paid (' + userPayments.length + ')', userPayments, 'None', p => `
       <div class="detail-list-item go" onclick="openPaymentPanel('${p.id}')">
-        <div class="dli-top"><span>${fmtMoney(p.amount)}</span>${statusBadge(p.paymentStatus)}</div>
-        <div class="dli-sub">${fmtDay(p.paymentDate)}${routeOf(p.tripId) ? ' · ' + routeOf(p.tripId) : ''}</div>
-        ${GO}
+        <div class="dli-main">
+          <div class="dli-title">${fmtMoney(p.amount)}</div>
+          <div class="dli-sub">${fmtDay(p.paymentDate)}${routeOf(p.tripId) ? ' · ' + routeOf(p.tripId) : ''}</div>
+        </div>
+        <div class="dli-end">${statusBadge(p.paymentStatus)}${GO}</div>
       </div>`)}
 
     ${list('Wallet history (' + userWalletTx.length + ')', userWalletTx, 'No movement', w => `
-      <div class="detail-list-item${getRefId(w.relatedTrip) ? ' go' : ''}"${getRefId(w.relatedTrip) ? ` onclick="openTripPanel('${getRefId(w.relatedTrip)}')"` : ''}>
+      <div class="detail-list-item">
         <div class="dli-top"><span class="wallet-amount ${(w.amount || 0) >= 0 ? 'wallet-positive' : 'wallet-negative'}">${fmtMoney(w.amount)}</span>${statusBadge(w.transactionType)}</div>
         <div class="dli-sub">${fmtDay(w.transactionDate)}${w.description ? ' · ' + w.description : (routeOf(w.relatedTrip) ? ' · ' + routeOf(w.relatedTrip) : '')}</div>
-        ${getRefId(w.relatedTrip) ? GO : ''}
       </div>`)}
   `;
   openPanel(getUserName(uid), html);
+}
+
+// One booking, one card, one click: the passenger, with what they paid written inside.
+// The payment itself is reached from the passenger's own record.
+function bookingCard(p) {
+  const id = getRefId(p.passengerId) || p.passengerId;
+  const u = usersMap[id];
+  if (!u) return `<p style="font-size:13px;color:var(--gray-400)">Account not found</p>`;
+  return `
+    <div class="booking-card" onclick="openUserPanel('${id}')">
+      ${avatarHtml(u, 36)}
+      <div class="bc-main">
+        <div class="pr-name">${displayName(u)}${bannedBadge(id)}</div>
+        <div class="pr-mail">${PRIVACY_MODE ? maskEmail(u.email, u) : (u.email || '—')}</div>
+        <div class="bc-pay"><span class="bm-amount">${fmtMoney(p.amount)}</span> · ${fmtDay(p.paymentDate)}</div>
+      </div>
+      <div class="dli-end">${statusBadge(p.paymentStatus)}<span class="dli-go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+    </div>`;
 }
 
 function openTripPanel(tripId) {
@@ -3162,15 +3189,7 @@ function openTripPanel(tripId) {
     <div class="detail-section">
       <h4>Bookings (${tripPayments.length})</h4>
       ${tripPayments.length ? tripPayments.map(p => `
-        <div class="booking-card">
-          ${personRow(p.passengerId, 'passenger')}
-          <div class="booking-meta" onclick="openPaymentPanel('${p.id}')">
-            <span class="bm-amount">${fmtMoney(p.amount)}</span>
-            ${statusBadge(p.paymentStatus)}
-            <span class="bm-date">${fmtDay(p.paymentDate)}</span>
-            <span class="bm-link">See the payment</span>
-          </div>
-        </div>`).join('') : '<p style="font-size:13px;color:var(--gray-400)">Nobody booked this trip</p>'}
+        ${bookingCard(p)}`).join('') : '<p style="font-size:13px;color:var(--gray-400)">Nobody booked this trip</p>'}
     </div>`;
   openPanel('Trip', html);
 }
