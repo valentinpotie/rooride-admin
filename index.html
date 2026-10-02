@@ -360,6 +360,15 @@ th.check-col, td.check-col { width: 38px; padding-right: 0; }
 .detail-list-item:hover { background: var(--orange-light); }
 .detail-list-item:not([onclick]) { cursor: default; }
 .doc-private { position: relative; cursor: default; overflow: hidden; }
+#page-verification .table-card { position: relative; }
+.verif-lock { display: none; }
+body.dd-mode #page-verification table { filter: blur(6px); pointer-events: none; user-select: none; }
+body.dd-mode .verif-lock { display: flex; position: absolute; left: 0; right: 0; top: 70px; bottom: 0; z-index: 3;
+  flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 20px; }
+.verif-lock svg { width: 46px; height: 46px; padding: 18px; box-sizing: content-box; background: var(--white); color: var(--dark);
+  border-radius: 50%; box-shadow: 0 6px 24px rgba(0,0,0,.14); }
+.verif-lock .vl-title { font-size: 16px; font-weight: 700; background: rgba(255,255,255,.9); padding: 4px 12px; border-radius: 999px; }
+.verif-lock .vl-sub { font-size: 12.5px; color: var(--gray-600); background: rgba(255,255,255,.9); padding: 3px 12px; border-radius: 999px; }
 .fake-id { width: 78%; max-width: 330px; aspect-ratio: 1.58; background: linear-gradient(135deg, #E9EEF5, #D9E2EC); border-radius: 12px;
   display: grid; grid-template-columns: 30% 1fr; grid-template-rows: 1fr auto; gap: 10px; padding: 14px; filter: blur(5px); }
 .fake-id .fi-photo { background: #B8C4D2; border-radius: 8px; }
@@ -1071,10 +1080,15 @@ body.dd-mode .dd-banner { display: flex; }
           <div class="table-header">
             <h3><svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2.2"/><path d="M5.5 17c.7-1.8 2-2.7 3.5-2.7s2.8.9 3.5 2.7"/><path d="M15 9.5h4"/><path d="M15 13h4"/></svg>Cases to review</h3>
             <div class="table-filter">
-              <button class="filter-btn" onclick="filterVerif('all', this)">All</button>
+              <button class="filter-btn active" onclick="filterVerif('all', this)">All</button>
               <button class="filter-btn" onclick="filterVerif('verified', this)">Verified</button>
-              <button class="filter-btn active" onclick="filterVerif('pending', this)">Pending</button>
+              <button class="filter-btn" onclick="filterVerif('pending', this)">Pending</button>
             </div>
+          </div>
+          <div class="verif-lock">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <div class="vl-title">Identity verification is private</div>
+            <div class="vl-sub">Identity documents and their review stay with the sellers until completion</div>
           </div>
           <table>
             <thead><tr>
@@ -2145,9 +2159,22 @@ function renderQuickMoney() {
 }
 
 // A few faces, so the count reads as people rather than as a number.
+// The three faces of the Quick view are chosen once and never move: they are pinned by a
+// fingerprint of the person's name (FNV-1a), so that no name sits in this public file and
+// the same three are found in the staff view and in the buyer's view alike.
+const PINNED_FACES = ['b7f08a76', 'b57561c1', '1c7a042b'];
+function namePrint(str) {
+  let h = 0x811c9dc5;
+  for (const b of new TextEncoder().encode(str)) h = Math.imul(h ^ b, 0x01000193) >>> 0;
+  return h.toString(16).padStart(8, '0');
+}
 function renderUserAvatars() {
   const box = document.getElementById('statUsersAvatars');
   if (!box) return;
+  const pinned = PINNED_FACES
+    .map(fp => allUsers.find(u => namePrint(String(displayName(u)).toLowerCase()) === fp))
+    .filter(Boolean);
+  if (pinned.length === 3) { box.innerHTML = pinned.map(u => avatarHtml(u, 30)).join(''); return; }
   // A photo_url is not a photo: some of them 404 and leave an empty circle. The
   // candidates are loaded first, and only the three that actually come back are shown.
   box.innerHTML = '';
@@ -3282,7 +3309,7 @@ function openWalletTxPanel(txId) {
 }
 
 // ── Verification ──
-let verifFilter = 'pending';
+let verifFilter = 'all';
 
 // Whether a person submitted an identity document. In the buyer's view the document is
 // never in the data, only the fact that one exists.
